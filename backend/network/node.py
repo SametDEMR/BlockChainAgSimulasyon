@@ -3,10 +3,11 @@ Node Module - Blockchain network node yapısı
 """
 import uuid
 import time
-from typing import List, Dict
+from typing import List, Dict, Optional
 from ..core.blockchain import Blockchain
 from ..core.transaction import Transaction
 from ..core.wallet import Wallet
+from .pbft_handler import PBFTHandler
 
 
 class Node:
@@ -18,6 +19,8 @@ class Node:
         role (str): Node rolü ("validator" veya "regular")
         blockchain (Blockchain): Node'un blockchain kopyası
         wallet (Wallet): Node'un cüzdanı
+        pbft (PBFTHandler): PBFT consensus handler (sadece validator'lar için)
+        message_broker: MessageBroker referansı (node'lar arası iletişim)
         status (str): Node durumu ("healthy", "under_attack", "recovering")
         is_active (bool): Node aktif mi?
         response_time (float): İstek yanıt süresi (ms)
@@ -26,12 +29,14 @@ class Node:
         is_sybil (bool): Sybil saldırı node'u mu?
     """
     
-    def __init__(self, role="regular"):
+    def __init__(self, role="regular", total_validators=4, message_broker=None):
         """
         Node oluştur
         
         Args:
             role (str): Node rolü ("validator" veya "regular")
+            total_validators (int): Toplam validator sayısı (PBFT için)
+            message_broker: MessageBroker instance (opsiyonel)
         """
         self.id = str(uuid.uuid4())[:8]
         self.role = role
@@ -43,6 +48,14 @@ class Node:
         self.trust_score = 100
         self.is_byzantine = False
         self.is_sybil = False
+        
+        # PBFT için MessageBroker referansı
+        self.message_broker = message_broker
+        
+        # PBFT Handler (sadece validator'lar için)
+        self.pbft: Optional[PBFTHandler] = None
+        if role == "validator":
+            self.pbft = PBFTHandler(self.id, total_validators)
         
         # İstatistikler
         self.blocks_mined = 0
@@ -84,9 +97,155 @@ class Node:
         
         return None
     
+    async def propose_block(self):
+        """
+        Yeni blok öner (validator için)
+        PBFT Pre-Prepare fazı başlatır
+        
+        Returns:
+            Block: Önerilen blok veya None
+        """
+        if not self.is_active or self.role != "validator":
+            return None
+        
+        if not self.pbft or not self.pbft.is_primary():
+            return None
+        
+        # Blok oluştur (mine)
+        block = self.blockchain.mine_pending_transactions(self.wallet.address)
+        
+        if not block or not self.message_broker:
+            return None
+        
+        # PBFT Pre-Prepare mesajı oluştur
+        sequence = self.pbft.sequence_number + 1
+        pre_prepare = self.pbft.create_pre_prepare(block.hash, sequence)
+        
+        # Tüm validator'lara broadcast
+        await self.message_broker.broadcast(
+            sender_id=self.id,
+            message_type='pre_prepare',
+            content={
+                'block': block.to_dict(),
+                'pbft_message': pre_prepare.to_dict()
+            },
+            exclude_sender=False  # Primary da almalı (kendi log'una eklemek için)
+        )
+        
+        print(f"Node {self.id} (PRIMARY) proposed block #{block.index}")
+        return block
+    
+    async def process_pbft_messages(self):
+        """
+        Bekleyen PBFT mesajlarını işle
+        Validator node'lar için
+        """
+        if not self.is_active or self.role != "validator" or not self.message_broker:
+            return
+        
+        # Mesajları al
+        messages = self.message_broker.get_messages_for_node(self.id)
+        
+        for msg in messages:
+            if msg.message_type == 'pre_prepare':
+                await self._handle_pre_prepare(msg)
+            elif msg.message_type == 'prepare':
+                await self._handle_prepare(msg)
+            elif msg.message_type == 'commit':
+                await self._handle_commit(msg)
+    
+    async def _handle_pre_prepare(self, message):
+        """Pre-Prepare mesajını işle"""
+        if not self.pbft:
+            return
+        
+        pbft_msg_dict = message.content.get('pbft_message')
+        if not pbft_msg_dict:
+            return
+        
+        # PBFT mesajını oluştur
+        from .pbft_handler import PBFTMessage
+        pbft_msg = PBFTMessage(
+            phase=pbft_msg_dict['phase'],
+            view=pbft_msg_dict['view'],
+            sequence_number=pbft_msg_dict['sequence_number'],
+            block_hash=pbft_msg_dict['block_hash'],
+            node_id=pbft_msg_dict['node_id']
+        )
+        
+        # PBFT'ye gönder ve prepare mesajı al
+        prepare_msg = self.pbft.process_pre_prepare(pbft_msg)
+        
+        if prepare_msg and self.message_broker:
+            # Prepare mesajını broadcast et
+            await self.message_broker.broadcast(
+                sender_id=self.id,
+                message_type='prepare',
+                content={'pbft_message': prepare_msg.to_dict()},
+                exclude_sender=False
+            )
+            print(f"Node {self.id} sent PREPARE")
+    
+    async def _handle_prepare(self, message):
+        """Prepare mesajını işle"""
+        if not self.pbft:
+            return
+        
+        pbft_msg_dict = message.content.get('pbft_message')
+        if not pbft_msg_dict:
+            return
+        
+        from .pbft_handler import PBFTMessage
+        pbft_msg = PBFTMessage(
+            phase=pbft_msg_dict['phase'],
+            view=pbft_msg_dict['view'],
+            sequence_number=pbft_msg_dict['sequence_number'],
+            block_hash=pbft_msg_dict['block_hash'],
+            node_id=pbft_msg_dict['node_id']
+        )
+        
+        # PBFT'ye gönder ve commit mesajı al
+        commit_msg = self.pbft.process_prepare(pbft_msg)
+        
+        if commit_msg and self.message_broker:
+            # Commit mesajını broadcast et
+            await self.message_broker.broadcast(
+                sender_id=self.id,
+                message_type='commit',
+                content={'pbft_message': commit_msg.to_dict()},
+                exclude_sender=False
+            )
+            print(f"Node {self.id} sent COMMIT")
+    
+    async def _handle_commit(self, message):
+        """Commit mesajını işle"""
+        if not self.pbft:
+            return
+        
+        pbft_msg_dict = message.content.get('pbft_message')
+        if not pbft_msg_dict:
+            return
+        
+        from .pbft_handler import PBFTMessage
+        pbft_msg = PBFTMessage(
+            phase=pbft_msg_dict['phase'],
+            view=pbft_msg_dict['view'],
+            sequence_number=pbft_msg_dict['sequence_number'],
+            block_hash=pbft_msg_dict['block_hash'],
+            node_id=pbft_msg_dict['node_id']
+        )
+        
+        # PBFT'ye gönder ve konsensüs kontrolü
+        consensus_reached = self.pbft.process_commit(pbft_msg)
+        
+        if consensus_reached:
+            print(f"Node {self.id} reached CONSENSUS!")
+            # Burada blok zincire eklenir (şimdilik sadece log)
+    
     def mine_block(self):
         """
         Bekleyen transaction'ları mine et ve blok oluştur
+        (Eski PoW yöntemi - validator olmayan node'lar için)
         
         Returns:
             Block: Oluşturulan blok veya None
@@ -94,14 +253,16 @@ class Node:
         if not self.is_active:
             return None
         
+        if self.role == "validator":
+            # Validator'lar PBFT kullanır, mine_block değil
+            print(f"Node {self.id} is validator, use propose_block() instead")
+            return None
+        
         if len(self.blockchain.pending_transactions) == 0:
-            # Boş blok oluşturma (sadece coinbase)
             pass
         
         # Byzantine node hatalı davranabilir
         if self.is_byzantine and self.role == "validator":
-            # Byzantine davranış simülasyonu için şimdilik normal mine
-            # İleride PBFT entegrasyonunda hatalı davranış eklenecek
             pass
         
         # Mining yap
@@ -127,7 +288,6 @@ class Node:
         if not self.is_active:
             return False
         
-        # Blok doğrulama ve ekleme
         return self.blockchain.add_block(block)
     
     def sync_blockchain(self, other_chain):
@@ -137,7 +297,6 @@ class Node:
         Args:
             other_chain (Blockchain): Senkronize edilecek zincir
         """
-        # En uzun geçerli zinciri seç
         if len(other_chain.chain) > len(self.blockchain.chain) and other_chain.is_valid():
             self.blockchain.chain = other_chain.chain.copy()
             print(f"Node {self.id} synced blockchain (new length: {len(self.blockchain.chain)})")
@@ -149,7 +308,7 @@ class Node:
         Returns:
             dict: Node durum bilgileri
         """
-        return {
+        status_dict = {
             'id': self.id,
             'role': self.role,
             'address': self.wallet.address,
@@ -166,6 +325,13 @@ class Node:
             'transactions_created': self.transactions_created,
             'total_earned': self.total_earned
         }
+        
+        # PBFT bilgileri ekle (validator ise)
+        if self.pbft:
+            pbft_stats = self.pbft.get_stats()
+            status_dict['pbft'] = pbft_stats
+        
+        return status_dict
     
     def set_byzantine(self, is_byzantine=True):
         """Byzantine node olarak işaretle"""
@@ -183,101 +349,22 @@ class Node:
     def set_under_attack(self):
         """Node'u saldırı altında işaretle"""
         self.status = "under_attack"
-        self.response_time *= 10  # Response time 10x artar
+        self.response_time *= 10
     
     def recover(self):
         """Node'u iyileştir"""
         self.status = "recovering"
         self.response_time = 50.0
         
-        # Güven puanını yavaşça artır
         if not self.is_byzantine and not self.is_sybil:
             self.trust_score = min(100, self.trust_score + 10)
             
-        # Kısa süre sonra healthy'ye dön
         time.sleep(1)
         if not self.is_byzantine and not self.is_sybil:
             self.status = "healthy"
     
     def __repr__(self):
-        """String representation"""
         return f"Node({self.id} | {self.role} | {self.status})"
     
     def __str__(self):
-        """User-friendly string"""
         return f"Node {self.id} ({self.role}) - Status: {self.status} | Chain: {len(self.blockchain.chain)} blocks"
-
-
-# Test
-if __name__ == "__main__":
-    import sys
-    import os
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    
-    print("=" * 60)
-    print("NODE MODULE TEST")
-    print("=" * 60)
-    
-    # Regular node oluştur
-    node1 = Node(role="regular")
-    print(f"\n✅ Regular Node Created:")
-    print(f"  ID: {node1.id}")
-    print(f"  Role: {node1.role}")
-    print(f"  Address: {node1.wallet.address[:20]}...")
-    print(f"  Status: {node1.status}")
-    print(f"  Trust Score: {node1.trust_score}")
-    
-    # Validator node oluştur
-    node2 = Node(role="validator")
-    print(f"\n✅ Validator Node Created:")
-    print(f"  ID: {node2.id}")
-    print(f"  Role: {node2.role}")
-    
-    # Transaction oluştur (başlangıçta balance 0 olacağı için başarısız olur)
-    print(f"\n📝 Creating transaction (should fail - no balance):")
-    tx = node1.create_transaction(node2.wallet.address, 10)
-    print(f"  Transaction created: {tx is not None}")
-    
-    # Mining test
-    print(f"\n⛏️  Mining first block with node1:")
-    block1 = node1.mine_block()
-    if block1:
-        print(f"  Block #{block1.index} mined")
-        print(f"  Node1 earned: {node1.total_earned} coins")
-        print(f"  Node1 balance: {node1.blockchain.get_balance(node1.wallet.address)}")
-    
-    # Şimdi balance var, transaction oluştur
-    print(f"\n📝 Creating transaction (should succeed now):")
-    tx = node1.create_transaction(node2.wallet.address, 10)
-    if tx:
-        print(f"  Transaction created: {tx}")
-        print(f"  Sender: {tx.sender[:20]}...")
-        print(f"  Receiver: {tx.receiver[:20]}...")
-        print(f"  Amount: {tx.amount}")
-    
-    # İkinci blok mine et
-    print(f"\n⛏️  Mining second block with node2:")
-    block2 = node2.mine_block()
-    if block2:
-        print(f"  Block #{block2.index} mined")
-    
-    # Node status
-    print(f"\n📊 Node1 Status:")
-    import json
-    print(json.dumps(node1.get_status(), indent=2))
-    
-    # Byzantine test
-    print(f"\n⚠️  Setting node1 as Byzantine:")
-    node1.set_byzantine(True)
-    print(f"  Byzantine: {node1.is_byzantine}")
-    print(f"  Status: {node1.status}")
-    print(f"  Trust Score: {node1.trust_score}")
-    
-    # Recovery test
-    print(f"\n🔄 Recovering node1:")
-    node1.is_byzantine = False
-    node1.recover()
-    print(f"  Status: {node1.status}")
-    print(f"  Trust Score: {node1.trust_score}")
-    
-    print("\n" + "=" * 60)
