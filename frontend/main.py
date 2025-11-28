@@ -46,6 +46,24 @@ def get_nodes():
         return None
 
 
+def get_pbft_status():
+    """API'den PBFT status al"""
+    try:
+        response = requests.get(f"{API_URL}/pbft/status")
+        return response.json()
+    except:
+        return None
+
+
+def get_network_messages():
+    """API'den network mesajları al"""
+    try:
+        response = requests.get(f"{API_URL}/network/messages")
+        return response.json()
+    except:
+        return None
+
+
 def start_simulator():
     """Simülasyonu başlat"""
     try:
@@ -123,6 +141,65 @@ if status:
     
     st.markdown("---")
     
+    # PBFT Status (YENİ)
+    pbft_status = get_pbft_status()
+    if pbft_status and pbft_status.get('enabled'):
+        st.subheader("🔐 PBFT Consensus Status")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Primary Validator", pbft_status.get('primary', 'N/A'))
+        
+        with col2:
+            st.metric("Current View", pbft_status.get('current_view', 0))
+        
+        with col3:
+            st.metric("Consensus Reached", pbft_status.get('total_consensus_reached', 0))
+        
+        with col4:
+            st.metric("Total Validators", pbft_status.get('total_validators', 0))
+        
+        # Validator details
+        with st.expander("📊 Validator Details", expanded=False):
+            validators = pbft_status.get('validators', [])
+            for v in validators:
+                col1, col2, col3 = st.columns([2, 1, 1])
+                with col1:
+                    primary_badge = "👑" if v['is_primary'] else "  "
+                    st.write(f"{primary_badge} **{v['node_id']}**")
+                with col2:
+                    st.write(f"View: {v['view']}")
+                with col3:
+                    st.write(f"Consensus: {v['total_consensus_reached']}")
+        
+        st.markdown("---")
+    
+    # Network Messages (YENİ)
+    network_msgs = get_network_messages()
+    if network_msgs:
+        st.subheader("📨 PBFT Message Traffic")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Total Messages", network_msgs.get('total_messages', 0))
+        
+        with col2:
+            st.metric("PBFT Messages", network_msgs.get('pbft_messages', 0))
+        
+        with col3:
+            msg_types = network_msgs.get('message_types', {})
+            st.metric("Message Types", len(msg_types))
+        
+        # Message type breakdown
+        if msg_types:
+            with st.expander("📋 Message Type Breakdown", expanded=False):
+                for msg_type, count in msg_types.items():
+                    st.write(f"- **{msg_type}**: {count}")
+        
+        st.markdown("---")
+    
     # Config info
     with st.expander("⚙️ Configuration", expanded=False):
         st.json(status['config'])
@@ -159,8 +236,29 @@ if status:
         with tab2:
             validators = [n for n in nodes_data['nodes'] if n['role'] == 'validator']
             st.write(f"**Total: {len(validators)} validators**")
+            
             for node in validators:
-                st.write(f"- **{node['id']}** | Trust: {node['trust_score']} | Blocks: {node['blocks_mined']}")
+                with st.container():
+                    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+                    
+                    with col1:
+                        # Primary badge
+                        is_primary = False
+                        if 'pbft' in node and node['pbft']['is_primary']:
+                            is_primary = True
+                            st.write(f"👑 **{node['id']}** (PRIMARY)")
+                        else:
+                            st.write(f"**{node['id']}**")
+                    
+                    with col2:
+                        st.write(f"Trust: {node['trust_score']}")
+                    
+                    with col3:
+                        st.write(f"Blocks: {node['blocks_mined']}")
+                    
+                    with col4:
+                        if 'pbft' in node:
+                            st.write(f"View: {node['pbft']['view']}")
         
         with tab3:
             regular = [n for n in nodes_data['nodes'] if n['role'] == 'regular']
