@@ -1,0 +1,406 @@
+Interactive Blockchain Attack Simulator - Proje Dokümantasyonu
+🎯 PROJE ÖZETİ
+Proje Adı: Interactive Blockchain Attack Simulator
+Amaç: Blockchain ağlarının çeşitli saldırı senaryoları karşısındaki davranışlarını görselleştiren eğitim ve demo amaçlı simülatör
+Mimari: Python FastAPI Backend + Streamlit Frontend
+Hedef Kitle: Blockchain geliştiricileri, siber güvenlik uzmanları, öğrenciler
+
+🚀 PROJE VİZYONU
+Tam kapsamlı bir blockchain laboratuvarı oluşturmak. Kullanıcıların çeşitli saldırı senaryolarını butonlarla tetikleyip, gerçek zamanlı olarak ağ üzerindeki etkilerini web arayüzünden izleyebileceği interaktif bir simülatör.
+
+🏗️ SİSTEM MİMARİSİ
+Backend Bileşenleri (FastAPI)
+Blockchain Core Module
+
+Blok Yapısı ve İşlem Modeli
+
+Cüzdan Sistemi ve Public/Private Key Management
+
+Zincir Yönetimi ve Geçerlilik Kontrolleri
+
+PBFT Consensus Module
+
+Validator Management ve Node Yönetimi
+
+4-Aşamalı PBFT Konsensüs Protokolü
+
+Byzantine Fault Detection Mekanizması
+
+Network Simulation Module
+
+Multi-node Local Ağ Simülasyonu
+
+Node'lar arası İletişim ve Mesajlaşma
+
+Veri Senkronizasyon ve Ağ Topolojisi
+
+Attack Engine Module
+
+Saldırı Senaryoları Yönetimi
+
+Saldırı Tetikleme ve Etki Analizi
+
+Sistem Kurtarma Mekanizmaları
+
+Frontend Bileşenleri (Streamlit)
+Real-time Dashboard
+
+Canlı Sistem Metrikleri Gösterimi
+
+Ağ Sağlığı ve Performans İzleme
+
+Gerçek Zamanlı Veri Görselleştirme
+
+Interactive Network Map
+
+Dinamik Ağ Haritası ve Node Görselleştirmesi
+
+Bağlantı Durumları ve Topoloji Gösterimi
+
+Canlı Veri Akışı Animasyonları (streamlit-agraph)
+
+Attack Control Panel
+
+Saldırı Senaryoları Butonları
+
+Saldırı Durumu ve Etki Göstergeleri
+
+Sistem Kontrol ve Yönetim Arayüzü
+
+Blockchain Visualization
+
+Tüm zincirin görselleştirilmesi
+
+Saldırıya uğrayan blokların renkli gösterimi
+
+Gerçek zamanlı zincir güncellemeleri
+
+⚙️ CONFIG TABANLI YAKLAŞIM
+Tüm sistem ayarları merkezi config dosyasından yönetilecek:
+
+Backend port ve host ayarları
+
+Node sayıları (toplam, validator, regular)
+
+Blok üretim aralığı ve işlem hızı
+
+Ağ gecikme parametreleri
+
+Saldırı senaryoları için varsayılan parametreler
+
+Streamlit ayarları ve yenileme aralığı
+
+🎮 SALDIRI SENARYOLARI
+1. %51 Saldırısı (Majority Attack)
+Saldırgan node'ların ağ hash gücünün %51'ini ele geçirmesi
+
+Çift harcama ve blok reorganizasyonu etkileri
+
+Hash gücü dağılımı ve çatallanma görselleştirmesi
+
+2. Byzantine Node Saldırısı
+Seçilen node'un hatalı blok üretmeye başlaması
+
+PBFT sürecinde aksama ve view change tetikleme
+
+PBFT mesaj trafiği ve validator güven puanları görselleştirmesi
+
+3. Ağ Bölünmesi (Network Partition)
+Ağın ikiye bölünmesi ve paralel zincir oluşumu
+
+İşlem tutarsızlığı ve conflict resolution testi
+
+Kopuk bağlantılar ve paralel zincir görselleştirmesi
+
+4. DDoS Saldırısı
+Hedef node'a yoğun istek gönderilmesi
+
+Performans düşüşü ve servis kesintisi etkileri
+
+Traffic grafiği ve node response time metriği
+
+5. Sybil Saldırısı
+Çok sayıda sahte node oluşturulması
+
+Ağ manipülasyonu ve konsensüs etkilenmesi
+
+Node sayısı artışı ve sahte node işaretlemesi
+
+6. Selfish Mining Saldırısı
+Saldırganın blokları gizli tutup sonradan yayınlaması
+
+Kazanç manipülasyonu ve ağ verimlilik kaybı
+
+Gizli ve public zincir karşılaştırması
+
+📊 DASHBOARD ve GÖRSELLEŞTİRME
+Ana Panel Bileşenleri
+Sistem Metrikleri Panel
+
+Ağ Sağlığı ve Performans Göstergeleri
+
+Blok Üretim Hızı ve İşlem Hacmi
+
+Güvenlik Durumu ve Aktif Node İstatistikleri
+
+Gerçek Zamanlı Metrik Grafikleri
+
+Canlı Ağ Haritası
+
+Interactive Network Topology Visualization (streamlit-agraph)
+
+Node Bağlantı Durumları ve Sağlık Göstergeleri
+
+Gerçek Zamanlı Veri Akışı Animasyonları
+
+Zoom ve Pan Özellikleri
+
+Saldırı Kontrol Paneli
+
+Tüm Saldırı Senaryoları için Tetikleme Butonları
+
+Saldırı Durumu ve Etki Seviyesi Göstergeleri
+
+Sistem Reset ve Kurtarma Kontrolleri
+
+Saldırı Geçmişi ve Log Görüntüleme
+
+Blockchain Görselleştirme
+
+Tam zincirin görüntülenmesi
+
+Saldırıya uğramış blokların renkli işaretlenmesi
+
+Gerçek zamanlı zincir büyümesi
+
+Gerçek Zamanlı Göstergeler
+Durum Göstergesi Sistemi
+
+Yeşil: Normal çalışma durumu
+
+Sarı: Uyarı ve performans düşüşü durumu
+
+Kırmızı: Kritik saldırı ve sistem çöküş durumu
+
+Mavi: Kurtarma ve iyileşme süreci
+
+Görsel Animasyonlar
+Blok Üretimi ve Zincir Güncelleme Animasyonları
+
+İşlem Akışı ve Data Transfer Görselleştirmesi
+
+Saldırı Etkisi ve Sistem Tepkisi Animasyonları
+
+Kurtarma ve İyileşme Süreci Görselleştirmesi
+
+🔄 SİSTEM İŞLEYİŞİ
+Normal Çalışma Modu
+Otomatik işlem üretimi ve blok oluşturma
+
+PBFT konsensüsü ile sorunsuz blok doğrulama
+
+Tüm node'ların senkronize çalışması
+
+Sağlıklı sistem metrikleri ve performans
+
+Saldırı Modu
+Kullanıcı tetiklemeli saldırı aktivasyonu
+
+Anlık sistem metriklerinde değişim
+
+Görsel arayüzde saldırı etkilerinin gösterilmesi
+
+Gerçek zamanlı etki analizi ve raporlama
+
+Saldırı sonrası otomatik iyileşme
+
+Kurtarma Modu
+Saldırı sonrası sistem iyileştirme
+
+Otomatik reset seçenekleri
+
+Normale dönüş süreci ve metrik iyileşmesi
+
+Sistem stabilizasyonu ve sağlık kontrolü
+
+🎯 KULLANIM SENARYOLARI
+Eğitim Modu
+Öğrencilerin saldırı senaryolarını interaktif denemesi
+
+Gerçek zamanlı etkilerin gözlemlenmesi
+
+Blockchain güvenlik kavramlarının görsel öğrenimi
+
+Demo Modu
+Profesyonel sunumlar için hazırlanmış senaryolar
+
+Etkileyici görselleştirme ve animasyonlar
+
+Katılımcı etkileşimli demo seansları
+
+Araştırma Modu
+Detaylı metrik analizi ve performans ölçümü
+
+Saldırı etkilerinin kapsamlı incelenmesi
+
+Sistem dayanıklılık testleri ve sınır analizi
+
+📈 ÖLÇÜLEBİLİR METRİKLER
+Performans Metrikleri
+İşlem Başarı Oranı ve Throughput Değerleri
+
+Blok Onay Süresi ve Sistem Gecikme Metrikleri
+
+Node Performansı ve Kaynak Kullanım İstatistikleri
+
+Scalability ve Yük Dengeleme Performansı
+
+Güvenlik Metrikleri
+Saldırı Tespit Süresi ve Doğruluk Oranı
+
+Konsensüs Başarı Oranı ve Sistem Kararlılığı
+
+Kurtarma Süresi ve Dayanıklılık Skorları
+
+Byzantine Fault Tolerance Seviyesi
+
+Kullanıcı Deneyimi Metrikleri
+Arayüz Tepki Süresi ve Interaktivite
+
+Görselleştirme Kalitesi ve Anlaşılırlık
+
+Senaryo Çeşitliliği ve Eğitim Değeri
+
+Sistem Kararlılığı ve Kesintisiz Çalışma
+
+✅ KABUL KRİTERLERİ
+Fonksiyonel Gereksinimler
+Tüm saldırı senaryolarının çalışması
+
+Gerçek zamanlı veri görselleştirme
+
+Interactive kontrol ve yönetim arayüzü
+
+Multi-node ağ simülasyonu
+
+Config tabanlı esnek yapılandırma
+
+Performans Gereksinimleri
+Hızlı saldırı tepki süresi
+
+Yüksek doğrulukta simülasyon
+
+Kesintisiz real-time data stream
+
+Responsive ve kullanıcı dostu arayüz
+
+Kalite Gereksinimleri
+Profesyonel görsel tasarım
+
+Kapsamlı ve anlaşılır dokümantasyon
+
+Stabil ve güvenilir sistem performansı
+
+Eğitici ve bilgilendirici içerik
+
+🗺️ IMPLEMENTASYON YOL HARİTASI
+1. Temel Altyapı ve Config Sisteminin Kurulumu
+Proje klasör yapısı ve config dosyası oluşturma
+
+Merkezi ayar yönetimi sistemi
+
+2. Basit API Sunucusunun Oluşturulması
+FastAPI backend temel yapısı
+
+Health check ve temel endpoint'ler
+
+3. Streamlit Arayüzünün Temelini Kurma
+Backend bağlantılı temel arayüz
+
+Config bilgilerinin görüntülenmesi
+
+4. Node Yönetim Sistemini İnşa Etme
+Config-based node oluşturma
+
+Node durum yönetimi
+
+5. Ağ Haritası Görselleştirmesini Ekleme
+Streamlit-agraph entegrasyonu
+
+Interactive network haritası
+
+6. Blockchain Çekirdek Yapısını Oluşturma
+Blok ve zincir veri yapıları
+
+Temel blockchain operasyonları
+
+7. Otomatik Blok Üretim Mekanizması
+Config'de belirlenen aralıklarla blok üretimi
+
+İşlem oluşturma sistemi
+
+8. Blockchain Görselleştirmesini Ekleme
+Zincir görselleştirme arayüzü
+
+Renk kodlu saldırı göstergeleri
+
+9. Saldırı Motoru Altyapısını Kurma
+Saldırı tetikleme ve yönetim sistemi
+
+Durum değişikliği mekanizmaları
+
+10-15. Saldırı Senaryolarının Implementasyonu
+Sırasıyla tüm 6 saldırı senaryosunun eklenmesi
+
+Her senaryo için görselleştirme ve etki analizi
+
+16. Gelişmiş Görselleştirme ve Animasyonlar
+Canlı veri akışı animasyonları
+
+İnteraktif kontrol paneli iyileştirmeleri
+
+17. Sistem Kontrollerini ve Metrikleri Tamamlama
+Başlat/Durdur butonları
+
+Kapsamlı metrik dashboard'u
+
+18. Son Testler ve İyileştirmeler
+Tüm sistemin kapsamlı testi
+
+Performans ve kullanıcı deneyimi iyileştirmeleri
+
+🎯 PROJE ÖZELLİKLERİ
+Teknik Özellikler
+Config Tabanlı: Tüm parametreler merkezi config'den yönetilir
+
+Gerçek Zamanlı: Canlı veri akışı ve anlık güncellemeler
+
+Interaktif: Kullanıcı kontrollü saldırı senaryoları
+
+Görsel Zengin: Streamlit-agraph ile advanced network visualizasyon
+
+Eğitici Odaklı: Blockchain güvenlik kavramlarının görsel öğrenimi
+
+Kullanıcı Deneyimi
+Tek tıkla saldırı tetikleme
+
+Otomatik sistem iyileşme
+
+Anlaşılır görsel geri bildirimler
+
+Sezgisel kontrol paneli
+
+Gerçek zamanlı metrik takibi
+
+Sistem Davranışı
+Varsayılan hızlı simülasyon
+
+Otomatik başlangıç ve çalışma
+
+Manuel durdurma/başlatma kontrolleri
+
+Geçici veri saklama (kalıcı değil)
+
+Otomatik saldırı sonrası iyileşme
+
+Bu doküman, Interactive Blockchain Attack Simulator projesinin tüm teknik ve fonksiyonel gereksinimlerini kapsamaktadır.
