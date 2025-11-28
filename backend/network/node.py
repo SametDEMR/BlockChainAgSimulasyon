@@ -49,6 +49,14 @@ class Node:
         self.is_byzantine = False
         self.is_sybil = False
         
+        # Metrikler
+        self.cpu_usage = 20  # %
+        self.memory_usage = 30  # %
+        self.network_latency = 10.0  # ms
+        self.packet_loss = 0.0  # %
+        self.requests_per_second = 0
+        self.errors_count = 0
+        
         # PBFT için MessageBroker referansı
         self.message_broker = message_broker
         
@@ -301,6 +309,24 @@ class Node:
             self.blockchain.chain = other_chain.chain.copy()
             print(f"Node {self.id} synced blockchain (new length: {len(self.blockchain.chain)})")
     
+    def get_metrics(self):
+        """
+        Node metriklerini döndür
+        
+        Returns:
+            dict: Node metrikleri
+        """
+        return {
+            'cpu_usage': self.cpu_usage,
+            'memory_usage': self.memory_usage,
+            'response_time': self.response_time,
+            'network_latency': self.network_latency,
+            'packet_loss': self.packet_loss,
+            'requests_per_second': self.requests_per_second,
+            'errors_count': self.errors_count,
+            'trust_score': self.trust_score
+        }
+    
     def get_status(self):
         """
         Node durumunu döndür
@@ -323,7 +349,8 @@ class Node:
             'pending_txs': len(self.blockchain.pending_transactions),
             'blocks_mined': self.blocks_mined,
             'transactions_created': self.transactions_created,
-            'total_earned': self.total_earned
+            'total_earned': self.total_earned,
+            'metrics': self.get_metrics()
         }
         
         # PBFT bilgileri ekle (validator ise)
