@@ -34,7 +34,7 @@ app.add_middleware(
 
 # Global simulator instance
 simulator = Simulator()
-background_task = None
+background_tasks_list = []
 
 
 # Request Models
@@ -51,7 +51,19 @@ class StopRequest(BaseModel):
 # Background task for auto block production
 async def run_auto_production():
     """Background task that runs auto block production"""
-    await simulator.auto_block_production()
+    try:
+        await simulator.auto_block_production()
+    except asyncio.CancelledError:
+        pass
+
+
+# Background task for PBFT message processing
+async def run_pbft_processing():
+    """Background task that processes PBFT messages"""
+    try:
+        await simulator.pbft_message_processing()
+    except asyncio.CancelledError:
+        pass
 
 
 # Routes
@@ -103,10 +115,85 @@ async def get_node(node_id: str):
     return node.get_status()
 
 
+@app.get("/network/nodes")
+async def get_network_nodes():
+    """Get detailed network nodes information including PBFT status"""
+    nodes_info = []
+    
+    for node in simulator.nodes:
+        node_info = node.get_status()
+        
+        # Add network specific info
+        node_info['message_queue_size'] = simulator.message_broker.get_queue_size(node.id)
+        
+        nodes_info.append(node_info)
+    
+    return {
+        "total_nodes": len(simulator.nodes),
+        "validator_count": len(simulator.validator_nodes),
+        "regular_count": len(simulator.regular_nodes),
+        "nodes": nodes_info
+    }
+
+
+@app.get("/network/messages")
+async def get_network_messages():
+    """Get PBFT message traffic"""
+    all_messages = simulator.message_broker.get_all_messages()
+    pbft_messages = simulator.get_pbft_messages()
+    
+    # Mesaj tiplerini say
+    message_types = {}
+    for msg in pbft_messages:
+        msg_type = msg.get('message_type', 'unknown')
+        message_types[msg_type] = message_types.get(msg_type, 0) + 1
+    
+    return {
+        "total_messages": len(all_messages),
+        "pbft_messages": len(pbft_messages),
+        "message_types": message_types,
+        "broker_stats": simulator.message_broker.get_stats(),
+        "recent_messages": pbft_messages[:20]  # Son 20 mesaj
+    }
+
+
+@app.get("/pbft/status")
+async def get_pbft_status():
+    """Get PBFT consensus status"""
+    if not simulator.validator_nodes:
+        return {
+            "enabled": False,
+            "message": "No validators in network"
+        }
+    
+    # Primary validator bilgisi
+    primary_node = None
+    for validator in simulator.validator_nodes:
+        if validator.pbft and validator.pbft.is_primary():
+            primary_node = validator
+            break
+    
+    # Tüm validator'ların stats'ı
+    validator_stats = []
+    for validator in simulator.validator_nodes:
+        if validator.pbft:
+            stats = validator.pbft.get_stats()
+            validator_stats.append(stats)
+    
+    return {
+        "enabled": True,
+        "total_validators": len(simulator.validator_nodes),
+        "primary": primary_node.id if primary_node else None,
+        "current_view": validator_stats[0]['view'] if validator_stats else 0,
+        "total_consensus_reached": sum(v['total_consensus_reached'] for v in validator_stats),
+        "validators": validator_stats
+    }
+
+
 @app.post("/start")
-async def start_simulator(background_tasks: BackgroundTasks):
+async def start_simulator():
     """Start the simulator"""
-    global background_task
+    global background_tasks_list
     
     if simulator.is_running:
         return {
@@ -117,30 +204,37 @@ async def start_simulator(background_tasks: BackgroundTasks):
     
     simulator.start()
     
-    # Start background task
-    background_task = asyncio.create_task(run_auto_production())
+    # Start background tasks
+    production_task = asyncio.create_task(run_auto_production())
+    pbft_task = asyncio.create_task(run_pbft_processing())
+    
+    background_tasks_list = [production_task, pbft_task]
     
     return {
         "status": "success",
-        "message": "Simulator started",
-        "is_running": simulator.is_running
+        "message": "Simulator started with PBFT",
+        "is_running": simulator.is_running,
+        "background_tasks": 2
     }
 
 
 @app.post("/stop")
 async def stop_simulator():
     """Stop the simulator"""
-    global background_task
+    global background_tasks_list
     
     simulator.stop()
     
-    # Cancel background task
-    if background_task and not background_task.done():
-        background_task.cancel()
-        try:
-            await background_task
-        except asyncio.CancelledError:
-            pass
+    # Cancel background tasks
+    for task in background_tasks_list:
+        if task and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+    
+    background_tasks_list = []
     
     return {
         "status": "success",
@@ -152,17 +246,19 @@ async def stop_simulator():
 @app.post("/reset")
 async def reset_simulator():
     """Reset the simulator"""
-    global background_task
+    global background_tasks_list
     
     # Stop first if running
     if simulator.is_running:
         simulator.stop()
-        if background_task and not background_task.done():
-            background_task.cancel()
-            try:
-                await background_task
-            except asyncio.CancelledError:
-                pass
+        for task in background_tasks_list:
+            if task and not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        background_tasks_list = []
     
     simulator.reset()
     return {
@@ -182,6 +278,7 @@ async def startup_event():
     print(f"Nodes: {len(simulator.nodes)}")
     print(f"Validators: {len(simulator.validator_nodes)}")
     print(f"Regular: {len(simulator.regular_nodes)}")
+    print(f"PBFT: {'Enabled' if simulator.validator_nodes else 'Disabled'}")
     print("=" * 60)
 
 
@@ -189,16 +286,17 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
-    global background_task
+    global background_tasks_list
     
     simulator.stop()
     
-    if background_task and not background_task.done():
-        background_task.cancel()
-        try:
-            await background_task
-        except asyncio.CancelledError:
-            pass
+    for task in background_tasks_list:
+        if task and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
     
     print("API Server shutdown")
 
