@@ -1,0 +1,178 @@
+"""
+Streamlit Frontend - Main UI
+"""
+import streamlit as st
+import requests
+import time
+import sys
+import os
+
+# Path ayarı
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from config import get_ui_config
+
+# Config
+ui_config = get_ui_config()
+API_URL = "http://localhost:8000"
+
+# Page config
+st.set_page_config(
+    page_title=ui_config['page_title'],
+    page_icon=ui_config['page_icon'],
+    layout=ui_config['layout']
+)
+
+# Title
+st.title("🔐 Blockchain Attack Simulator")
+st.markdown("---")
+
+
+def get_api_status():
+    """API'den status al"""
+    try:
+        response = requests.get(f"{API_URL}/status")
+        return response.json()
+    except:
+        return None
+
+
+def get_nodes():
+    """API'den node'ları al"""
+    try:
+        response = requests.get(f"{API_URL}/nodes")
+        return response.json()
+    except:
+        return None
+
+
+def start_simulator():
+    """Simülasyonu başlat"""
+    try:
+        response = requests.post(f"{API_URL}/start")
+        return response.json()
+    except:
+        return None
+
+
+def stop_simulator():
+    """Simülasyonu durdur"""
+    try:
+        response = requests.post(f"{API_URL}/stop")
+        return response.json()
+    except:
+        return None
+
+
+def reset_simulator():
+    """Simülasyonu sıfırla"""
+    try:
+        response = requests.post(f"{API_URL}/reset")
+        return response.json()
+    except:
+        return None
+
+
+# Main UI
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    if st.button("▶️ Start", use_container_width=True):
+        result = start_simulator()
+        if result:
+            st.success("Simulator started!")
+        else:
+            st.error("Failed to start")
+
+with col2:
+    if st.button("⏸️ Stop", use_container_width=True):
+        result = stop_simulator()
+        if result:
+            st.warning("Simulator stopped!")
+        else:
+            st.error("Failed to stop")
+
+with col3:
+    if st.button("🔄 Reset", use_container_width=True):
+        result = reset_simulator()
+        if result:
+            st.info("Simulator reset!")
+        else:
+            st.error("Failed to reset")
+
+st.markdown("---")
+
+# Status section
+status = get_api_status()
+
+if status:
+    # Metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Status", "🟢 Running" if status['is_running'] else "🔴 Stopped")
+    
+    with col2:
+        st.metric("Total Nodes", status['total_nodes'])
+    
+    with col3:
+        st.metric("Active Nodes", status['active_nodes'])
+    
+    with col4:
+        st.metric("Chain Length", status['total_blocks'])
+    
+    st.markdown("---")
+    
+    # Config info
+    with st.expander("⚙️ Configuration", expanded=False):
+        st.json(status['config'])
+    
+    # Nodes section
+    st.subheader("📡 Network Nodes")
+    
+    nodes_data = get_nodes()
+    
+    if nodes_data:
+        # Filter tabs
+        tab1, tab2, tab3 = st.tabs(["All Nodes", "Validators", "Regular"])
+        
+        with tab1:
+            st.write(f"**Total: {nodes_data['total_nodes']} nodes**")
+            for node in nodes_data['nodes']:
+                with st.container():
+                    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+                    
+                    with col1:
+                        st.write(f"**Node {node['id']}**")
+                        st.caption(f"{node['role']}")
+                    
+                    with col2:
+                        status_emoji = "🟢" if node['status'] == "healthy" else "🟡" if node['status'] == "recovering" else "🔴"
+                        st.write(f"{status_emoji} {node['status']}")
+                    
+                    with col3:
+                        st.write(f"⛓️ {node['chain_length']} blocks")
+                    
+                    with col4:
+                        st.write(f"💰 {node['balance']:.2f}")
+        
+        with tab2:
+            validators = [n for n in nodes_data['nodes'] if n['role'] == 'validator']
+            st.write(f"**Total: {len(validators)} validators**")
+            for node in validators:
+                st.write(f"- **{node['id']}** | Trust: {node['trust_score']} | Blocks: {node['blocks_mined']}")
+        
+        with tab3:
+            regular = [n for n in nodes_data['nodes'] if n['role'] == 'regular']
+            st.write(f"**Total: {len(regular)} regular nodes**")
+            for node in regular:
+                st.write(f"- **{node['id']}** | Balance: {node['balance']:.2f}")
+
+else:
+    st.error("❌ Cannot connect to API server. Make sure it's running:")
+    st.code("python backend/main.py", language="bash")
+
+# Auto refresh
+if st.checkbox("Auto Refresh", value=True):
+    time.sleep(ui_config['refresh_interval'])
+    st.rerun()
