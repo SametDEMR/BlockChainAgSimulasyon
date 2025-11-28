@@ -102,4 +102,4 @@ if __name__ == "__main__":
         test_api_pbft_endpoints()
     except requests.exceptions.ConnectionError:
         print("⚠️  API sunucusu çalışmıyor!")
-        print("Önce 'python backend/main.py' ile sunucuyu başlat")
+        print("Önce 'python backend/main_old.py' ile sunucuyu başlat")

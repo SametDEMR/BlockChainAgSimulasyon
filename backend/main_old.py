@@ -1,7 +1,7 @@
 """
-FastAPI Backend - Main API Server with Attack Endpoints
+FastAPI Backend - Main API Server
 """
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -10,6 +10,7 @@ import sys
 import os
 import asyncio
 
+# Path ayarı
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.simulator import Simulator
@@ -17,12 +18,14 @@ from backend.attacks.attack_engine import AttackEngine, AttackType
 from backend.attacks.ddos import DDoSAttack
 from config import get_api_config
 
+# FastAPI app
 app = FastAPI(
     title="Blockchain Attack Simulator API",
     description="Interactive Blockchain Network Simulator with Attack Scenarios",
     version="1.0.0"
 )
 
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,70 +34,112 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Global simulator instance
 simulator = Simulator()
-attack_engine = AttackEngine()
 background_tasks_list = []
+
+# Global attack engine instance
+attack_engine = AttackEngine()
+
+
+# Request Models
+class StartRequest(BaseModel):
+    """Start simulator request"""
+    pass
+
+
+class StopRequest(BaseModel):
+    """Stop simulator request"""
+    pass
 
 
 class TriggerAttackRequest(BaseModel):
+    """Trigger attack request"""
     attack_type: str
     target_node_id: str
     parameters: Optional[dict] = None
 
 
+# Background task for auto block production
 async def run_auto_production():
+    """Background task that runs auto block production"""
     try:
         await simulator.auto_block_production()
     except asyncio.CancelledError:
         pass
 
 
+# Background task for PBFT message processing
 async def run_pbft_processing():
+    """Background task that processes PBFT messages"""
     try:
         await simulator.pbft_message_processing()
     except asyncio.CancelledError:
         pass
 
 
+# Routes
 @app.get("/")
 async def root():
-    return {"status": "ok", "message": "Blockchain Attack Simulator API", "version": "1.0.0"}
+    """Health check endpoint"""
+    return {
+        "status": "ok",
+        "message": "Blockchain Attack Simulator API",
+        "version": "1.0.0"
+    }
 
 
 @app.get("/status")
 async def get_status():
+    """Get simulator status"""
     return simulator.get_status()
 
 
 @app.get("/blockchain")
 async def get_blockchain():
+    """Get full blockchain from first node"""
     if not simulator.nodes:
         raise HTTPException(status_code=404, detail="No nodes available")
+
     node = simulator.nodes[0]
-    return {"chain_length": len(node.blockchain.chain), "chain": node.blockchain.to_dict()}
+    return {
+        "chain_length": len(node.blockchain.chain),
+        "chain": node.blockchain.to_dict()
+    }
 
 
 @app.get("/nodes")
 async def get_nodes():
-    return {"total_nodes": len(simulator.nodes), "nodes": simulator.get_all_nodes_status()}
+    """Get all nodes status"""
+    return {
+        "total_nodes": len(simulator.nodes),
+        "nodes": simulator.get_all_nodes_status()
+    }
 
 
 @app.get("/nodes/{node_id}")
 async def get_node(node_id: str):
+    """Get specific node status"""
     node = simulator.get_node_by_id(node_id)
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
+
     return node.get_status()
 
 
 @app.get("/network/nodes")
 async def get_network_nodes():
+    """Get detailed network nodes information including PBFT status"""
     nodes_info = []
+
     for node in simulator.nodes:
         node_info = node.get_status()
+
+        # Add network specific info
         node_info['message_queue_size'] = simulator.message_broker.get_queue_size(node.id)
+
         nodes_info.append(node_info)
-    
+
     return {
         "total_nodes": len(simulator.nodes),
         "validator_count": len(simulator.validator_nodes),
@@ -105,38 +150,48 @@ async def get_network_nodes():
 
 @app.get("/network/messages")
 async def get_network_messages():
+    """Get PBFT message traffic"""
     all_messages = simulator.message_broker.get_all_messages()
     pbft_messages = simulator.get_pbft_messages()
+
+    # Mesaj tiplerini say
     message_types = {}
     for msg in pbft_messages:
         msg_type = msg.get('message_type', 'unknown')
         message_types[msg_type] = message_types.get(msg_type, 0) + 1
-    
+
     return {
         "total_messages": len(all_messages),
         "pbft_messages": len(pbft_messages),
         "message_types": message_types,
         "broker_stats": simulator.message_broker.get_stats(),
-        "recent_messages": pbft_messages[:20]
+        "recent_messages": pbft_messages[:20]  # Son 20 mesaj
     }
 
 
 @app.get("/pbft/status")
 async def get_pbft_status():
+    """Get PBFT consensus status"""
     if not simulator.validator_nodes:
-        return {"enabled": False, "message": "No validators in network"}
-    
+        return {
+            "enabled": False,
+            "message": "No validators in network"
+        }
+
+    # Primary validator bilgisi
     primary_node = None
     for validator in simulator.validator_nodes:
         if validator.pbft and validator.pbft.is_primary():
             primary_node = validator
             break
-    
+
+    # Tüm validator'ların stats'ı
     validator_stats = []
     for validator in simulator.validator_nodes:
         if validator.pbft:
-            validator_stats.append(validator.pbft.get_stats())
-    
+            stats = validator.pbft.get_stats()
+            validator_stats.append(stats)
+
     return {
         "enabled": True,
         "total_validators": len(simulator.validator_nodes),
@@ -149,23 +204,40 @@ async def get_pbft_status():
 
 @app.post("/start")
 async def start_simulator():
+    """Start the simulator"""
     global background_tasks_list
-    
+
     if simulator.is_running:
-        return {"status": "warning", "message": "Simulator already running", "is_running": True}
-    
+        return {
+            "status": "warning",
+            "message": "Simulator already running",
+            "is_running": True
+        }
+
     simulator.start()
+
+    # Start background tasks
     production_task = asyncio.create_task(run_auto_production())
     pbft_task = asyncio.create_task(run_pbft_processing())
+
     background_tasks_list = [production_task, pbft_task]
-    
-    return {"status": "success", "message": "Simulator started", "is_running": True, "background_tasks": 2}
+
+    return {
+        "status": "success",
+        "message": "Simulator started with PBFT",
+        "is_running": simulator.is_running,
+        "background_tasks": 2
+    }
 
 
 @app.post("/stop")
 async def stop_simulator():
+    """Stop the simulator"""
     global background_tasks_list
+
     simulator.stop()
+
+    # Cancel background tasks
     for task in background_tasks_list:
         if task and not task.done():
             task.cancel()
@@ -173,13 +245,22 @@ async def stop_simulator():
                 await task
             except asyncio.CancelledError:
                 pass
+
     background_tasks_list = []
-    return {"status": "success", "message": "Simulator stopped", "is_running": False}
+
+    return {
+        "status": "success",
+        "message": "Simulator stopped",
+        "is_running": simulator.is_running
+    }
 
 
 @app.post("/reset")
 async def reset_simulator():
+    """Reset the simulator"""
     global background_tasks_list
+
+    # Stop first if running
     if simulator.is_running:
         simulator.stop()
         for task in background_tasks_list:
@@ -190,109 +271,55 @@ async def reset_simulator():
                 except asyncio.CancelledError:
                     pass
         background_tasks_list = []
-    
+
     simulator.reset()
-    attack_engine.reset()
-    return {"status": "success", "message": "Reset complete", "total_nodes": len(simulator.nodes)}
-
-
-# Attack Endpoints
-@app.post("/attack/trigger")
-async def trigger_attack(request: TriggerAttackRequest):
-    target_node = simulator.get_node_by_id(request.target_node_id)
-    if not target_node:
-        raise HTTPException(status_code=404, detail="Target node not found")
-    
-    try:
-        attack_type = AttackType(request.attack_type.lower())
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid attack type: {request.attack_type}")
-    
-    if attack_type == AttackType.DDOS:
-        intensity = request.parameters.get("intensity", "high") if request.parameters else "high"
-        ddos = DDoSAttack(target_node=target_node, attack_engine=attack_engine, intensity=intensity)
-        attack_id = await ddos.execute()
-        
-        return {
-            "status": "success",
-            "message": f"DDoS attack triggered on {request.target_node_id}",
-            "attack_id": attack_id,
-            "attack_type": attack_type.value,
-            "target": request.target_node_id,
-            "parameters": {"intensity": intensity}
-        }
-    else:
-        raise HTTPException(status_code=501, detail=f"Attack {attack_type.value} not implemented")
-
-
-@app.get("/attack/status")
-async def get_attack_status():
     return {
-        "active_attacks": attack_engine.get_active_attacks(),
-        "recent_history": attack_engine.get_attack_history(limit=10),
-        "statistics": attack_engine.get_statistics()
+        "status": "success",
+        "message": "Simulator reset",
+        "total_nodes": len(simulator.nodes)
     }
 
 
-@app.get("/attack/status/{attack_id}")
-async def get_specific_attack_status(attack_id: str):
-    attack = attack_engine.get_attack_status(attack_id)
-    if not attack:
-        raise HTTPException(status_code=404, detail="Attack not found")
-    return attack
-
-
-@app.post("/attack/stop/{attack_id}")
-async def stop_attack_endpoint(attack_id: str):
-    success = attack_engine.stop_attack(attack_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Attack not found or already stopped")
-    return {"status": "success", "message": f"Attack {attack_id} stopped", "attack_id": attack_id}
-
-
-@app.get("/metrics")
-async def get_all_metrics():
-    return {
-        "total_nodes": len(simulator.nodes),
-        "metrics": [
-            {
-                "node_id": node.id,
-                "role": node.role,
-                "status": node.status,
-                "metrics": node.get_metrics()
-            }
-            for node in simulator.nodes
-        ]
-    }
-
-
-@app.get("/metrics/{node_id}")
-async def get_node_metrics(node_id: str):
-    node = simulator.get_node_by_id(node_id)
-    if not node:
-        raise HTTPException(status_code=404, detail="Node not found")
-    return {"node_id": node.id, "role": node.role, "status": node.status, "metrics": node.get_metrics()}
-
-
+# Startup event
 @app.on_event("startup")
 async def startup_event():
+    """Initialize on startup"""
     print("=" * 60)
-    print("🚀 Blockchain Attack Simulator API")
-    print(f"Nodes: {len(simulator.nodes)} | Validators: {len(simulator.validator_nodes)}")
-    print("Attack Engine: Ready")
+    print("🚀 Blockchain Attack Simulator API Starting...")
+    print("=" * 60)
+    print(f"Nodes: {len(simulator.nodes)}")
+    print(f"Validators: {len(simulator.validator_nodes)}")
+    print(f"Regular: {len(simulator.regular_nodes)}")
+    print(f"PBFT: {'Enabled' if simulator.validator_nodes else 'Disabled'}")
     print("=" * 60)
 
 
+# Shutdown event
 @app.on_event("shutdown")
 async def shutdown_event():
+    """Cleanup on shutdown"""
     global background_tasks_list
+
     simulator.stop()
+
     for task in background_tasks_list:
         if task and not task.done():
             task.cancel()
-    print("Shutdown complete")
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+    print("API Server shutdown")
 
 
+# Run server
 if __name__ == "__main__":
     config = get_api_config()
-    uvicorn.run("main:app", host=config['host'], port=config['port'], reload=config['reload'])
+
+    uvicorn.run(
+        "main:app",
+        host=config['host'],
+        port=config['port'],
+        reload=config['reload']
+    )

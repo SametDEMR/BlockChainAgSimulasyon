@@ -1,0 +1,120 @@
+"""
+Attack API Endpoints - Ek endpointler
+Bu dosya main.py'nin sonuna eklenecek
+"""
+
+# Attack Endpoints
+@app.post("/attack/trigger")
+async def trigger_attack(request: TriggerAttackRequest):
+    """Trigger an attack"""
+    # Get target node
+    target_node = simulator.get_node_by_id(request.target_node_id)
+    if not target_node:
+        raise HTTPException(status_code=404, detail="Target node not found")
+    
+    # Parse attack type
+    try:
+        attack_type = AttackType(request.attack_type.lower())
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid attack type: {request.attack_type}")
+    
+    # Handle different attack types
+    if attack_type == AttackType.DDOS:
+        # Get intensity from parameters
+        intensity = "high"
+        if request.parameters:
+            intensity = request.parameters.get("intensity", "high")
+        
+        # Create and execute DDoS attack
+        ddos = DDoSAttack(
+            target_node=target_node,
+            attack_engine=attack_engine,
+            intensity=intensity
+        )
+        
+        attack_id = await ddos.execute()
+        
+        return {
+            "status": "success",
+            "message": f"DDoS attack triggered on node {request.target_node_id}",
+            "attack_id": attack_id,
+            "attack_type": attack_type.value,
+            "target": request.target_node_id,
+            "parameters": {"intensity": intensity}
+        }
+    
+    else:
+        raise HTTPException(status_code=501, detail=f"Attack type {attack_type.value} not implemented yet")
+
+
+@app.get("/attack/status")
+async def get_attack_status():
+    """Get all active attacks status"""
+    active_attacks = attack_engine.get_active_attacks()
+    history = attack_engine.get_attack_history(limit=10)
+    stats = attack_engine.get_statistics()
+    
+    return {
+        "active_attacks": active_attacks,
+        "recent_history": history,
+        "statistics": stats
+    }
+
+
+@app.get("/attack/status/{attack_id}")
+async def get_specific_attack_status(attack_id: str):
+    """Get specific attack status"""
+    attack = attack_engine.get_attack_status(attack_id)
+    if not attack:
+        raise HTTPException(status_code=404, detail="Attack not found")
+    
+    return attack
+
+
+@app.post("/attack/stop/{attack_id}")
+async def stop_attack_endpoint(attack_id: str):
+    """Stop a specific attack"""
+    success = attack_engine.stop_attack(attack_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Attack not found or already stopped")
+    
+    return {
+        "status": "success",
+        "message": f"Attack {attack_id} stopped",
+        "attack_id": attack_id
+    }
+
+
+@app.get("/metrics")
+async def get_all_metrics():
+    """Get metrics for all nodes"""
+    metrics = []
+    
+    for node in simulator.nodes:
+        node_metrics = {
+            "node_id": node.id,
+            "role": node.role,
+            "status": node.status,
+            "metrics": node.get_metrics()
+        }
+        metrics.append(node_metrics)
+    
+    return {
+        "total_nodes": len(simulator.nodes),
+        "metrics": metrics
+    }
+
+
+@app.get("/metrics/{node_id}")
+async def get_node_metrics(node_id: str):
+    """Get metrics for specific node"""
+    node = simulator.get_node_by_id(node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+    
+    return {
+        "node_id": node.id,
+        "role": node.role,
+        "status": node.status,
+        "metrics": node.get_metrics()
+    }

@@ -268,7 +268,7 @@ if status:
 
 else:
     st.error("❌ Cannot connect to API server. Make sure it's running:")
-    st.code("python backend/main.py", language="bash")
+    st.code("python backend/main_old.py", language="bash")
 
 # Auto refresh
 if st.checkbox("Auto Refresh", value=True):

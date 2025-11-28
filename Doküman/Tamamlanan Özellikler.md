@@ -141,10 +141,10 @@
 **Kullanım:**
 ```bash
 # API başlat
-python backend/main.py
+python backend/main_old.py
 
 # UI başlat
-streamlit run frontend/main.py
+streamlit run frontend/main_old.py
 ```
 
 ---
