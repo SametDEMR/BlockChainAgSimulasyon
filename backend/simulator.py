@@ -3,8 +3,10 @@ Simulator Module - Blockchain network simülasyon motoru
 """
 import asyncio
 import time
+import random
 from typing import List, Dict
 from backend.network.node import Node
+from backend.network.message_broker import MessageBroker
 from config import get_network_config, get_blockchain_config
 
 
@@ -16,6 +18,7 @@ class Simulator:
         nodes (List[Node]): Tüm node'lar
         validator_nodes (List[Node]): Validator node'lar
         regular_nodes (List[Node]): Regular node'lar
+        message_broker (MessageBroker): Node'lar arası mesajlaşma
         is_running (bool): Simülasyon çalışıyor mu?
         config (dict): Network yapılandırması
     """
@@ -29,8 +32,12 @@ class Simulator:
         self.config = get_network_config()
         self.blockchain_config = get_blockchain_config()
         
+        # MessageBroker oluştur
+        self.message_broker = MessageBroker(min_delay=0.1, max_delay=0.3)
+        
         # Auto-production task
         self._auto_production_task = None
+        self._pbft_processing_task = None
         
         # Initialize nodes
         self.initialize_nodes()
@@ -42,23 +49,32 @@ class Simulator:
         
         # Validator node'ları oluştur
         for i in range(validator_count):
-            node = Node(role="validator")
+            node = Node(
+                role="validator",
+                total_validators=validator_count,
+                message_broker=self.message_broker
+            )
+            node.id = f"node_{i}"  # PBFT primary selection için sabit ID
             self.nodes.append(node)
             self.validator_nodes.append(node)
+            self.message_broker.register_node(node.id)
         
         # Regular node'ları oluştur
         regular_count = total_nodes - validator_count
         for i in range(regular_count):
-            node = Node(role="regular")
+            node = Node(role="regular", message_broker=self.message_broker)
             self.nodes.append(node)
             self.regular_nodes.append(node)
+            self.message_broker.register_node(node.id)
         
         print(f"✅ Initialized {total_nodes} nodes ({validator_count} validators, {regular_count} regular)")
+        print(f"✅ MessageBroker configured with {len(self.message_broker.message_queues)} nodes")
     
     async def auto_block_production(self):
-        """Otomatik blok üretimi - background task"""
-        import random
-        
+        """
+        Otomatik blok üretimi - background task
+        Validator'lar PBFT kullanır, Regular'lar mine eder
+        """
         block_time = self.blockchain_config['block_time']
         
         while self.is_running:
@@ -67,15 +83,52 @@ class Simulator:
             if not self.is_running:
                 break
             
-            # Rastgele bir active node seç ve blok mine ettir
-            active_nodes = [n for n in self.nodes if n.is_active]
-            if active_nodes:
-                miner = random.choice(active_nodes)
+            # Validator'lar için PBFT blok önerisi
+            if self.validator_nodes:
+                # Primary validator blok önerir
+                primary = None
+                for validator in self.validator_nodes:
+                    if validator.pbft and validator.pbft.is_primary() and validator.is_active:
+                        primary = validator
+                        break
+                
+                if primary:
+                    # Primary blok önerir
+                    try:
+                        block = await primary.propose_block()
+                        if block:
+                            print(f"✓ Primary {primary.id} proposed block via PBFT")
+                    except Exception as e:
+                        print(f"⚠️  Error in block proposal: {e}")
+            
+            # Regular node'lar için klasik mining
+            active_regular = [n for n in self.regular_nodes if n.is_active]
+            if active_regular:
+                miner = random.choice(active_regular)
                 block = miner.mine_block()
                 
                 if block:
-                    # Bloğu diğer node'lara yay
+                    # Bloğu diğer regular node'lara yay
                     await self.broadcast_block(block, exclude_node=miner)
+    
+    async def pbft_message_processing(self):
+        """
+        PBFT mesajlarını periyodik olarak işle
+        Background task
+        """
+        while self.is_running:
+            await asyncio.sleep(0.5)  # Her 500ms'de bir mesaj işle
+            
+            if not self.is_running:
+                break
+            
+            # Tüm validator'lar mesajlarını işler
+            for validator in self.validator_nodes:
+                if validator.is_active:
+                    try:
+                        await validator.process_pbft_messages()
+                    except Exception as e:
+                        print(f"⚠️  Error processing PBFT messages for {validator.id}: {e}")
     
     async def broadcast_block(self, block, exclude_node=None):
         """
@@ -101,6 +154,16 @@ class Simulator:
     def stop(self):
         """Simülasyonu durdur"""
         self.is_running = False
+        
+        # Background task'leri durdur
+        if self._auto_production_task:
+            self._auto_production_task.cancel()
+            self._auto_production_task = None
+        
+        if self._pbft_processing_task:
+            self._pbft_processing_task.cancel()
+            self._pbft_processing_task = None
+        
         print("⏸️  Simulator stopped")
     
     def get_status(self):
@@ -113,6 +176,21 @@ class Simulator:
         active_nodes = len([n for n in self.nodes if n.is_active])
         total_blocks = max([len(n.blockchain.chain) for n in self.nodes]) if self.nodes else 0
         
+        # PBFT istatistikleri
+        pbft_stats = {}
+        if self.validator_nodes:
+            primary_id = self.validator_nodes[0].pbft.get_primary_id() if self.validator_nodes[0].pbft else None
+            total_consensus = sum(v.pbft.total_consensus_reached for v in self.validator_nodes if v.pbft)
+            
+            pbft_stats = {
+                'primary_validator': primary_id,
+                'total_consensus_reached': total_consensus,
+                'current_view': self.validator_nodes[0].pbft.view if self.validator_nodes[0].pbft else 0
+            }
+        
+        # MessageBroker istatistikleri
+        broker_stats = self.message_broker.get_stats()
+        
         return {
             'is_running': self.is_running,
             'total_nodes': len(self.nodes),
@@ -120,6 +198,8 @@ class Simulator:
             'validator_nodes': len(self.validator_nodes),
             'regular_nodes': len(self.regular_nodes),
             'total_blocks': total_blocks,
+            'pbft': pbft_stats,
+            'message_broker': broker_stats,
             'config': self.config
         }
     
@@ -147,12 +227,33 @@ class Simulator:
         """
         return [node.get_status() for node in self.nodes]
     
+    def get_pbft_messages(self):
+        """
+        Tüm PBFT mesajlarını döndür (debug için)
+        
+        Returns:
+            list: PBFT mesajları
+        """
+        all_messages = self.message_broker.get_all_messages()
+        pbft_messages = [
+            msg for msg in all_messages 
+            if msg['message_type'] in ['pre_prepare', 'prepare', 'commit']
+        ]
+        return pbft_messages
+    
     def reset(self):
         """Simülasyonu sıfırla"""
         self.stop()
+        
+        # MessageBroker'ı temizle
+        self.message_broker.clear_all_queues()
+        
+        # Node'ları temizle
         self.nodes.clear()
         self.validator_nodes.clear()
         self.regular_nodes.clear()
+        
+        # Yeniden başlat
         self.initialize_nodes()
         print("🔄 Simulator reset")
     
@@ -160,76 +261,3 @@ class Simulator:
         """String representation"""
         status = "Running" if self.is_running else "Stopped"
         return f"Simulator({status} | {len(self.nodes)} nodes)"
-
-
-# Test
-if __name__ == "__main__":
-    import sys
-    import os
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    
-    print("=" * 60)
-    print("SIMULATOR MODULE TEST")
-    print("=" * 60)
-    
-    # Simulator oluştur
-    simulator = Simulator()
-    
-    print(f"\n✅ Simulator Created: {simulator}")
-    print(f"  Total nodes: {len(simulator.nodes)}")
-    print(f"  Validators: {len(simulator.validator_nodes)}")
-    print(f"  Regular: {len(simulator.regular_nodes)}")
-    
-    # Status
-    print(f"\n📊 Simulator Status:")
-    import json
-    print(json.dumps(simulator.get_status(), indent=2))
-    
-    # Start simulator
-    print(f"\n▶️  Starting simulator...")
-    simulator.start()
-    print(f"  Is running: {simulator.is_running}")
-    
-    # Manual mining test
-    print(f"\n⛏️  Manual mining test:")
-    node = simulator.nodes[0]
-    print(f"  Mining with node {node.id}...")
-    block = node.mine_block()
-    if block:
-        print(f"  Block #{block.index} mined")
-        print(f"  Broadcasting to other nodes...")
-        
-        # Sync manually (asyncio olmadan test için)
-        for other_node in simulator.nodes:
-            if other_node != node:
-                other_node.receive_block(block)
-        
-        print(f"  All nodes synced")
-    
-    # Check chain lengths
-    print(f"\n📊 Chain Lengths:")
-    for i, node in enumerate(simulator.nodes[:5]):  # İlk 5 node
-        print(f"  Node {node.id}: {len(node.blockchain.chain)} blocks")
-    
-    # Node lookup test
-    print(f"\n🔍 Node Lookup Test:")
-    test_id = simulator.nodes[0].id
-    found_node = simulator.get_node_by_id(test_id)
-    print(f"  Looking for: {test_id}")
-    print(f"  Found: {found_node.id if found_node else 'None'}")
-    
-    # Stop simulator
-    print(f"\n⏸️  Stopping simulator...")
-    simulator.stop()
-    print(f"  Is running: {simulator.is_running}")
-    
-    # Reset test
-    print(f"\n🔄 Reset Test:")
-    print(f"  Nodes before reset: {len(simulator.nodes)}")
-    simulator.reset()
-    print(f"  Nodes after reset: {len(simulator.nodes)}")
-    print(f"  New nodes have fresh blockchains: {len(simulator.nodes[0].blockchain.chain)} blocks")
-    
-    print("\n" + "=" * 60)
-    print("✅ SIMULATOR TEST PASSED!")
-    print("=" * 60)
