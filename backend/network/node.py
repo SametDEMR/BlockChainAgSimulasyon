@@ -181,10 +181,31 @@ class Node:
             node_id=pbft_msg_dict['node_id']
         )
         
+        # Block hash validasyonu - Byzantine detection
+        block_data = message.content.get('block')
+        if block_data and block_data.get('hash') != pbft_msg.block_hash:
+            # HATA: Pre-prepare'deki hash ile gerçek blok hash'i uyuşmuyor!
+            # Bu Byzantine davranış işaretidir
+            print(f"⚠️  Node {self.id} detected MISMATCH in pre-prepare from {pbft_msg.node_id}")
+            print(f"    Expected: {pbft_msg.block_hash[:16]}...")
+            print(f"    Actual: {block_data.get('hash', 'N/A')[:16]}...")
+            
+            # Mesajı reddet, prepare gönderme
+            return
+        
+        # Fake hash detection (tamamı 0)
+        if pbft_msg.block_hash == "0" * 64:
+            print(f"⚠️  Node {self.id} detected FAKE hash from {pbft_msg.node_id}")
+            # Byzantine davranış - mesajı reddet
+            return
+        
         # PBFT'ye gönder ve prepare mesajı al
         prepare_msg = self.pbft.process_pre_prepare(pbft_msg)
         
         if prepare_msg and self.message_broker:
+            # Doğru davranış - trust score +1
+            self.trust_score = min(100, self.trust_score + 1)
+            
             # Prepare mesajını broadcast et
             await self.message_broker.broadcast(
                 sender_id=self.id,
@@ -192,7 +213,7 @@ class Node:
                 content={'pbft_message': prepare_msg.to_dict()},
                 exclude_sender=False
             )
-            print(f"Node {self.id} sent PREPARE")
+            print(f"Node {self.id} sent PREPARE (trust: {self.trust_score})")
     
     async def _handle_prepare(self, message):
         """Prepare mesajını işle"""
@@ -216,6 +237,9 @@ class Node:
         commit_msg = self.pbft.process_prepare(pbft_msg)
         
         if commit_msg and self.message_broker:
+            # Doğru davranış - trust score +1
+            self.trust_score = min(100, self.trust_score + 1)
+            
             # Commit mesajını broadcast et
             await self.message_broker.broadcast(
                 sender_id=self.id,
@@ -223,7 +247,7 @@ class Node:
                 content={'pbft_message': commit_msg.to_dict()},
                 exclude_sender=False
             )
-            print(f"Node {self.id} sent COMMIT")
+            print(f"Node {self.id} sent COMMIT (trust: {self.trust_score})")
     
     async def _handle_commit(self, message):
         """Commit mesajını işle"""
@@ -247,7 +271,9 @@ class Node:
         consensus_reached = self.pbft.process_commit(pbft_msg)
         
         if consensus_reached:
-            print(f"Node {self.id} reached CONSENSUS!")
+            # Konsensüs sağlandı - trust score +2 (bonus)
+            self.trust_score = min(100, self.trust_score + 2)
+            print(f"Node {self.id} reached CONSENSUS! (trust: {self.trust_score})")
             # Burada blok zincire eklenir (şimdilik sadece log)
     
     def mine_block(self):
