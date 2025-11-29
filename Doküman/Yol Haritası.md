@@ -614,9 +614,9 @@ async def auto_block_production():
 ```bash
 # Backend
 cd backend
-python main_old.py
+python main_old_1.py
 
 # Frontend (ayrı terminal)
 cd frontend
-streamlit run main_old.py
+streamlit run main_old_1.py
 ```

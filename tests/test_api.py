@@ -110,7 +110,7 @@ def main():
     print("API ENDPOINTS TEST")
     print("*" * 60)
     print("\nMake sure API server is running:")
-    print("  python backend/main_old.py")
+    print("  python backend/main_old_1.py")
     print("\n" + "*" * 60)
     
     try:
@@ -128,7 +128,7 @@ def main():
     except requests.exceptions.ConnectionError:
         print("\n❌ ERROR: Cannot connect to API server")
         print("Please start the server first:")
-        print("  python backend/main_old.py")
+        print("  python backend/main_old_1.py")
     except AssertionError as e:
         print(f"\n❌ TEST FAILED: {e}")
     except Exception as e:

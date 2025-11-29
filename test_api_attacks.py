@@ -4,7 +4,7 @@ Test edilecek manuel olarak çünkü FastAPI server gerekiyor
 """
 
 # Test için kullan:
-# 1. API'yi başlat: python backend/main_old.py
+# 1. API'yi başlat: python backend/main_old_1.py
 # 2. Başka terminal'de requests ile test et
 
 import requests
@@ -15,7 +15,7 @@ API_BASE = "http://localhost:8000"
 print("=" * 60)
 print("API ATTACK ENDPOINTS TEST")
 print("=" * 60)
-print("\nÖnce API'yi başlatın: python backend/main_old.py")
+print("\nÖnce API'yi başlatın: python backend/main_old_1.py")
 print("Sonra bu testi çalıştırın.\n")
 
 try:
@@ -89,6 +89,6 @@ try:
     
 except requests.exceptions.ConnectionError:
     print("\n❌ HATA: API'ye bağlanılamıyor!")
-    print("Önce API'yi başlatın: python backend/main_old.py")
+    print("Önce API'yi başlatın: python backend/main_old_1.py")
 except Exception as e:
     print(f"\n❌ HATA: {e}")
