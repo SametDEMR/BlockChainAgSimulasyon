@@ -253,6 +253,60 @@ class Simulator:
         ]
         return pbft_messages
     
+    def _create_sybil_node(self, node_id: str):
+        """
+        Sahte Sybil node oluştur
+        
+        Args:
+            node_id: Node ID
+            
+        Returns:
+            Node: Oluşturulan sahte node
+        """
+        # Sahte node oluştur (regular role)
+        node = Node(role="regular", message_broker=self.message_broker)
+        node.id = node_id
+        node.is_sybil = True  # Sybil bayrağını set et
+        node.is_active = True
+        
+        # Listeye ekle
+        self.nodes.append(node)
+        self.regular_nodes.append(node)
+        
+        # MessageBroker'a kaydet
+        self.message_broker.register_node(node.id)
+        
+        print(f"🔴 Sybil node created: {node_id}")
+        return node
+    
+    def _remove_sybil_node(self, node_id: str):
+        """
+        Sahte Sybil node'u kaldır
+        
+        Args:
+            node_id: Node ID
+        """
+        # Node'u bul
+        node = self.get_node_by_id(node_id)
+        if not node:
+            return
+        
+        # Sadece Sybil node'ları kaldır
+        if not node.is_sybil:
+            print(f"⚠️  Node {node_id} is not a Sybil node")
+            return
+        
+        # Listelerden çıkar
+        if node in self.nodes:
+            self.nodes.remove(node)
+        if node in self.regular_nodes:
+            self.regular_nodes.remove(node)
+        
+        # MessageBroker'dan kaldır
+        self.message_broker.unregister_node(node_id)
+        
+        print(f"✓ Sybil node removed: {node_id}")
+    
     def reset(self):
         """Simülasyonu sıfırla"""
         self.stop()

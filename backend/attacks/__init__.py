@@ -5,6 +5,7 @@ Attack simulations module
 from .attack_engine import AttackEngine, AttackType, AttackStatus, Attack
 from .ddos import DDoSAttack
 from .byzantine import ByzantineAttack
+from .sybil import SybilAttack
 
 __all__ = [
     'AttackEngine', 
@@ -12,5 +13,6 @@ __all__ = [
     'AttackStatus', 
     'Attack',
     'DDoSAttack',
-    'ByzantineAttack'
+    'ByzantineAttack',
+    'SybilAttack'
 ]
