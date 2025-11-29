@@ -218,6 +218,18 @@ class Simulator:
                 return node
         return None
     
+    def get_node(self, node_id):
+        """
+        ID'ye göre node bul (kısa alias)
+        
+        Args:
+            node_id (str): Node ID
+            
+        Returns:
+            Node: Bulunan node veya None
+        """
+        return self.get_node_by_id(node_id)
+    
     def get_all_nodes_status(self):
         """
         Tüm node'ların durumunu döndür

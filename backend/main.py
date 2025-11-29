@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from backend.simulator import Simulator
 from backend.attacks.attack_engine import AttackEngine, AttackType
 from backend.attacks.ddos import DDoSAttack
+from backend.attacks.byzantine import ByzantineAttack
 from config import get_api_config
 
 app = FastAPI(
@@ -33,6 +34,7 @@ app.add_middleware(
 
 simulator = Simulator()
 attack_engine = AttackEngine()
+byzantine_attack = ByzantineAttack(simulator)
 background_tasks_list = []
 
 
@@ -221,6 +223,20 @@ async def trigger_attack(request: TriggerAttackRequest):
             "target": request.target_node_id,
             "parameters": {"intensity": intensity}
         }
+    
+    elif attack_type == AttackType.BYZANTINE:
+        result = byzantine_attack.trigger(request.target_node_id)
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result["message"])
+        
+        return {
+            "status": "success",
+            "message": result["message"],
+            "attack_type": attack_type.value,
+            "target": request.target_node_id,
+            "duration": result.get("duration", 30)
+        }
+    
     else:
         raise HTTPException(status_code=501, detail=f"Attack {attack_type.value} not implemented")
 
@@ -248,6 +264,21 @@ async def stop_attack_endpoint(attack_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Attack not found or already stopped")
     return {"status": "success", "message": f"Attack {attack_id} stopped", "attack_id": attack_id}
+
+
+@app.get("/attack/byzantine/status")
+async def get_byzantine_attack_status():
+    """Byzantine saldırı durumunu döndür"""
+    return byzantine_attack.get_status()
+
+
+@app.post("/attack/byzantine/stop")
+async def stop_byzantine_attack():
+    """Byzantine saldırısını durdur"""
+    result = byzantine_attack.stop()
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    return result
 
 
 @app.get("/metrics")
