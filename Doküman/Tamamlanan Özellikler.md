@@ -388,21 +388,289 @@ BlockChainAgSimulasyon/
 - ✅ **API PBFT:** New endpoints, PBFT monitoring - PASSED
 - ✅ **UI PBFT:** Status panels, message traffic, validator details - PASSED
 
+### MILESTONE 3 ✅
+- ✅ **Attack Engine:** Attack management system - PASSED
+- ✅ **DDoS Attack:** DDoS implementation and effects - PASSED
+- ✅ **Node Metrics:** Metrics system and tracking - PASSED
+- ✅ **Attack API:** Attack endpoints working - PASSED
+- ✅ **UI Attack Panel:** Attack control interface - PASSED
+- ✅ **UI Metrics:** Metrics dashboard and visualization - PASSED
+
+### MILESTONE 4 ✅
+- ✅ **Byzantine Attack:** Byzantine node implementation - PASSED
+- ✅ **Trust Score:** Automatic trust score system - PASSED
+- ✅ **Byzantine Detection:** Fake hash detection working - PASSED
+- ✅ **UI Byzantine:** Byzantine attack panel and indicators - PASSED
+- ✅ **UI Trust Score:** Trust score visualization with colors - PASSED
+- ✅ **UI Validator Tab:** Enhanced validator display - PASSED
+
 ---
 
 ## Sonraki Adımlar
 
-**MILESTONE 3: İlk Saldırı (DDoS)**
-- Attack Engine altyapısı
-- DDoS implementation
-- Node metrik sistemi
-- API saldırı endpoints
-- UI attack panel
-- UI metrics dashboard
+**MILESTONE 5: Sybil Saldırısı**
+- Sybil attack implementation
+- Sahte node oluşturma
+- Network visualizer
+- Sybil node işaretleme
 
-**MILESTONE 4+: Diğer Saldırılar**
-- Byzantine Node Saldırısı
-- Sybil Saldırısı
+**MILESTONE 6+: Diğer Saldırılar**
 - %51 Saldırısı
 - Network Partition
 - Selfish Mining
+
+---
+
+## MILESTONE 3: İlk Saldırı (DDoS) ✅
+
+### 3.1 Attack Engine ✅
+**Dosya:** `backend/attacks/attack_engine.py`
+
+**Özellikler:**
+- AttackType enum (DDoS, Byzantine, Sybil, Majority, Partition, Selfish Mining)
+- AttackStatus enum (Idle, Active, Recovering, Completed)
+- Attack class (sınıf yapısı)
+- AttackEngine class (saldırı yönetimi)
+- Saldırı trigger, stop, status fonksiyonları
+- Saldırı geçmişi (history tracking)
+- İstatistikler
+
+**Test:** `test_attack_engine.py` - Attack engine testi PASSED
+
+---
+
+### 3.2 DDoS Implementation ✅
+**Dosya:** `backend/attacks/ddos.py`
+
+**Özellikler:**
+- DDoSAttack sınıfı
+- Intensity levels (low, medium, high)
+- Response time artırımı (10x)
+- Status değişimi (under_attack)
+- Otomatik iyileşme (20 saniye)
+- Metrik değişiklikleri (CPU, memory, latency, packet loss)
+
+**Test:** `test_ddos.py` - DDoS attack testi PASSED
+
+---
+
+### 3.3 Node Metrik Sistemi ✅
+**Güncelleme:** `backend/network/node.py`
+
+**Eklenti:**
+- `response_time` metriği (varsayılan: 50ms)
+- `status`: "healthy" / "under_attack" / "recovering"
+- `get_metrics()` metodu:
+  - cpu_usage, memory_usage
+  - response_time, network_latency
+  - packet_loss, requests_per_second
+  - errors_count, trust_score
+- `set_under_attack()` - Metrik değişiklikleri
+- `recover()` - İyileşme mekanizması
+
+**Test:** `test_node_metrics.py` - Node metrikleri testi PASSED
+
+---
+
+### 3.4 API Saldırı Endpointleri ✅
+**Güncelleme:** `backend/main.py`
+
+**Yeni endpoint:**
+- `POST /attack/trigger` - Saldırı başlat (type, target, parameters)
+- `GET /attack/status` - Aktif saldırılar + geçmiş
+- `GET /attack/status/{attack_id}` - Spesifik saldırı durumu
+- `POST /attack/stop/{attack_id}` - Saldırıyı durdur
+- `GET /metrics` - Tüm node metrikleri
+- `GET /metrics/{node_id}` - Spesifik node metrikleri
+
+**Test:** `test_api_attacks.py` - Attack API endpoint'leri PASSED
+
+---
+
+### 3.5 UI Attack Panel ✅
+**Yeni dosya:** `frontend/components/attack_panel.py`
+
+**Gösterim:**
+- Attack type selectörü (DDoS, Byzantine, vb.)
+- Target node selectörü
+- Intensity slider (DDoS için)
+- Trigger Attack butonu
+- Active Attacks paneli:
+  - Attack ID, type, status
+  - Target, parameters
+  - Effects list (expandable)
+  - Stop butonu
+- Attack History paneli:
+  - Son 5 saldırı
+  - Attack details, duration
+
+**Test:** Manuel UI testi - Attack panel çalışıyor
+
+---
+
+### 3.6 UI Metrics Dashboard ✅
+**Yeni dosya:** `frontend/components/metrics_dashboard.py`
+
+**Gösterim:**
+- Response Time grafikleri (Plotly line chart)
+- Trust Score kartları (node bazında)
+- Status göstergeleri (renkli kartlar):
+  - Yeşil: healthy
+  - Sarı: recovering
+  - Kırmızı: under_attack
+- Gerçek zamanlı güncelleme
+- Node detail view (expandable)
+
+**Test:** Manuel UI testi - Metrics dashboard çalışıyor
+
+---
+
+## ✅ MILESTONE 3 Tamamlandı
+**Çıktı:** DDoS saldırısı çalışıyor, etkileri görselleştiriliyor.
+
+---
+
+## MILESTONE 4: Byzantine Node Saldırısı ✅
+
+### 4.1 Byzantine Attack ✅
+**Dosya:** `backend/attacks/byzantine.py`
+
+**ByzantineAttack sınıfı:**
+- `trigger(target_node_id)` - Saldırıyı başlat
+- `stop()` - Saldırıyı durdur
+- `get_status()` - Saldırı durumu
+- `_auto_recovery()` - Otomatik iyileşme (30 saniye)
+
+**Özellikler:**
+- Hedef validator yanlış hash gönderir (64x'0')
+- PBFT pre-prepare mesajında fake hash
+- Diğer validator'lar tespit eder ve reddeder
+- Trust score ceza: -20 (trigger), -20 (recovery)
+- Node status: healthy → under_attack → recovering → healthy
+- Byzantine flag set/unset
+
+**Test:** `test_byzantine.py` - Byzantine attack PASSED
+
+---
+
+### 4.2 Trust Score Sistemi ✅
+**Güncelleme:** `backend/network/node.py`
+
+**Eklenti:**
+- `_handle_pre_prepare()`: Byzantine detection + trust +1
+  - Fake hash detection (64x'0')
+  - Hash mismatch detection
+  - Yanlış mesajları reddet
+- `_handle_prepare()`: Trust +1 (doğru davranış)
+- `_handle_commit()`: Trust +2 (consensus bonus)
+
+**Trust Score Mekanizması:**
+- Başlangıç: 100
+- Doğru davranış ödülleri:
+  - Pre-prepare işleme: +1
+  - Prepare gönderme: +1
+  - Commit gönderme: +1
+  - Consensus başarı: +2 (bonus)
+- Hatalı davranış cezaları:
+  - Byzantine saldırı başlangıcı: -20
+  - Byzantine saldırı bitişi: -20
+  - Fake hash tespit: mesaj reddedilir, trust artmaz
+- Range: 0-100
+
+**Test:** `test_trust_score.py` - Trust score mekanizması PASSED
+
+---
+
+### 4.3 UI'ya Byzantine Göstergesi ✅
+**Güncelleme:** `frontend/components/attack_panel.py`
+
+**Eklenti:**
+- Byzantine attack type seçeneği
+- `trigger_byzantine_attack()` fonksiyonu
+- `display_byzantine_status()` - Aktif saldırı paneli:
+  - Target node bilgisi
+  - Elapsed/Remaining time
+  - Progress bar
+  - Stop butonu
+  - Target node detayları (expandable)
+- `stop_byzantine_attack()` - Saldırıyı durdur
+
+**Güncelleme:** `frontend/main.py`
+
+**Validator Tabı Güncellemesi:**
+- Trust Score Summary (average)
+- Her validator için:
+  - Primary badge (👑)
+  - Byzantine warning (⚠️)
+  - Renk kodlu trust score:
+    - 🟢 Yeşil: ≥90 (Healthy)
+    - 🟠 Turuncu: 70-89 (Warning)
+    - 🔴 Kırmızı: <70 (Danger)
+  - Status emoji (🟢🟡🔴)
+  - PBFT consensus count
+- Expandable details:
+  - Chain length, Balance
+  - Blocks mined, Response time
+  - PBFT view, View changes
+
+**Test:** `test_ui_byzantine.py` - UI test rehberi
+
+---
+
+## ✅ MILESTONE 4 Tamamlandı
+**Çıktı:** Byzantine saldırısı çalışıyor, PBFT etkileniyor, trust score sistemi aktif.
+
+---
+
+## Proje Yapısı (Güncel)
+
+```
+BlockChainAgSimulasyon/
+├── config.py                       # Merkezi yapılandırma
+├── requirements.txt                # Bağımlılıklar
+├── test_byzantine.py                # Byzantine attack test (YENİ)
+├── test_trust_score.py              # Trust score test (YENİ)
+├── test_ui_byzantine.py             # UI test rehberi (YENİ)
+├── test_core.py                     # Core modül testleri
+├── test_node.py                     # Node testleri
+├── test_simulator.py                # Simulator testleri
+├── test_api.py                      # API testleri
+├── test_message_broker.py           # MessageBroker testleri
+├── test_pbft_handler.py             # PBFT handler testleri
+├── test_node_pbft.py                # Node+PBFT testleri
+├── test_simulator_pbft.py           # Simulator+PBFT testleri
+├── test_api_pbft.py                 # API PBFT endpoint testleri
+├── test_attack_engine.py            # Attack engine testleri (YENİ)
+├── test_ddos.py                     # DDoS attack testleri (YENİ)
+├── test_node_metrics.py             # Node metrics testleri (YENİ)
+├── test_api_attacks.py              # Attack API testleri (YENİ)
+├── backend/
+│   ├── __init__.py
+│   ├── main.py                     # FastAPI server (GÜNCELLENMİŞ)
+│   ├── simulator.py                # Network simülatörü (GÜNCELLENMİŞ)
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── transaction.py
+│   │   ├── wallet.py
+│   │   ├── block.py
+│   │   └── blockchain.py
+│   ├── network/
+│   │   ├── __init__.py
+│   │   ├── node.py                 # Node sınıfı (GÜNCELLENMİŞ)
+│   │   ├── message_broker.py       # MessageBroker
+│   │   └── pbft_handler.py         # PBFT Handler
+│   └── attacks/
+│       ├── __init__.py             # (GÜNCELLENMİŞ)
+│       ├── attack_engine.py        # Attack yönetimi (YENİ)
+│       ├── ddos.py                 # DDoS attack (YENİ)
+│       └── byzantine.py            # Byzantine attack (YENİ)
+└── frontend/
+    ├── main.py                     # Streamlit UI (GÜNCELLENMİŞ)
+    └── components/
+        ├── attack_panel.py         # Attack kontrol paneli (GÜNCELLENMİŞ)
+        └── metrics_dashboard.py    # Metrics dashboard (YENİ)
+```
+
+---
+
+## Teknik Detaylar (Güncel)

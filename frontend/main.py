@@ -147,15 +147,64 @@ if status:
             with subtab2:
                 validators = [n for n in nodes_data['nodes'] if n['role'] == 'validator']
                 st.write(f"**Total: {len(validators)}**")
+                
+                # Trust Score Özeti
+                st.markdown("#### 🎯 Trust Score Summary")
+                avg_trust = sum(v['trust_score'] for v in validators) / len(validators) if validators else 0
+                st.metric("Average Trust Score", f"{avg_trust:.1f}")
+                
+                st.markdown("---")
+                
                 for node in validators:
-                    col1, col2, col3 = st.columns([2, 1, 1])
-                    with col1:
-                        badge = "👑" if node.get('pbft', {}).get('is_primary') else ""
-                        st.write(f"{badge} **{node['id']}**")
-                    with col2:
-                        st.write(f"Trust: {node['trust_score']}")
-                    with col3:
-                        st.write(f"Blocks: {node['blocks_mined']}")
+                    with st.container():
+                        col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+                        
+                        with col1:
+                            # Primary badge ve Byzantine uyarısı
+                            badge = "👑" if node.get('pbft', {}).get('is_primary') else ""
+                            byzantine_flag = " ⚠️ BYZANTINE" if node.get('is_byzantine') else ""
+                            st.write(f"{badge} **{node['id']}**{byzantine_flag}")
+                        
+                        with col2:
+                            # Trust score renk kodlu
+                            trust = node['trust_score']
+                            if trust >= 90:
+                                color = "green"
+                            elif trust >= 70:
+                                color = "orange"
+                            else:
+                                color = "red"
+                            st.markdown(f":{color}[Trust: {trust}]")
+                        
+                        with col3:
+                            # Status
+                            status_emoji = "🟢" if node['status'] == "healthy" else "🟡" if node['status'] == "recovering" else "🔴"
+                            st.write(f"{status_emoji} {node['status']}")
+                        
+                        with col4:
+                            # PBFT stats
+                            if node.get('pbft'):
+                                consensus = node['pbft'].get('total_consensus_reached', 0)
+                                st.write(f"✅ {consensus}")
+                        
+                        # Detayları genişletilebilir panel
+                        with st.expander(f"🔍 Details - {node['id']}"):
+                            col1, col2, col3 = st.columns(3)
+                            
+                            with col1:
+                                st.metric("Chain Length", node['chain_length'])
+                                st.metric("Balance", f"{node['balance']:.2f}")
+                            
+                            with col2:
+                                st.metric("Blocks Mined", node['blocks_mined'])
+                                st.metric("Response Time", f"{node['response_time']:.1f}ms")
+                            
+                            with col3:
+                                if node.get('pbft'):
+                                    st.metric("PBFT View", node['pbft']['view'])
+                                    st.metric("View Changes", node['pbft'].get('total_view_changes', 0))
+                        
+                        st.markdown("---")
             
             with subtab3:
                 regular = [n for n in nodes_data['nodes'] if n['role'] == 'regular']
