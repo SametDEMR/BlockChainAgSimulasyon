@@ -18,19 +18,35 @@ def render_attack_panel():
         
         attack_type = st.selectbox(
             "Attack Type",
-            ["DDoS", "Byzantine", "Sybil (Coming Soon)", 
+            ["DDoS", "Byzantine", "Sybil", 
              "51% Attack (Coming Soon)", "Network Partition (Coming Soon)", 
              "Selfish Mining (Coming Soon)"],
             key="attack_type_select"
         )
         
         node_options = [f"{node['id']} ({node['role']})" for node in nodes]
-        target_selection = st.selectbox(
-            "Target Node",
-            node_options,
-            key="target_node_select"
-        )
-        target_node_id = target_selection.split(" ")[0]
+        
+        # Target selection (sadece DDoS ve Byzantine için)
+        target_node_id = None
+        if attack_type in ["DDoS", "Byzantine"]:
+            target_selection = st.selectbox(
+                "Target Node",
+                node_options,
+                key="target_node_select"
+            )
+            target_node_id = target_selection.split(" ")[0]
+        
+        # Sybil için num_nodes
+        num_fake_nodes = None
+        if attack_type == "Sybil":
+            num_fake_nodes = st.slider(
+                "Number of Fake Nodes",
+                min_value=5,
+                max_value=50,
+                value=20,
+                step=5,
+                key="sybil_num_nodes"
+            )
         
         intensity = None
         if attack_type == "DDoS":
@@ -49,6 +65,8 @@ def render_attack_panel():
                     trigger_ddos_attack(target_node_id, intensity)
                 elif attack_type == "Byzantine":
                     trigger_byzantine_attack(target_node_id)
+                elif attack_type == "Sybil":
+                    trigger_sybil_attack(num_fake_nodes)
                 else:
                     st.warning("This attack type is not implemented yet")
         
@@ -61,6 +79,9 @@ def render_attack_panel():
         
         st.markdown("---")
         display_byzantine_status()
+        
+        st.markdown("---")
+        display_sybil_status()
         
         st.markdown("---")
         display_attack_history()
@@ -286,6 +307,106 @@ def stop_attack(attack_id: str):
             st.rerun()
         else:
             st.error(f"Failed to stop attack: {result}")
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"API Error: {e}")
+
+
+def trigger_sybil_attack(num_nodes: int):
+    """Sybil saldırısı tetikler"""
+    try:
+        response = requests.post(f"{API_BASE}/attack/sybil/trigger?num_nodes={num_nodes}")
+        result = response.json()
+        
+        if response.status_code == 200:
+            st.success(f"✅ {result['message']}")
+            st.info(f"Attack ID: {result['attack_id']}")
+            st.rerun()
+        else:
+            st.error(f"Failed to trigger Sybil attack: {result}")
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"API Error: {e}")
+
+
+def display_sybil_status():
+    """Sybil saldırı durumunu gösterir"""
+    st.markdown("#### 🔴 Sybil Attack Status")
+    
+    try:
+        response = requests.get(f"{API_BASE}/attack/sybil/status")
+        status = response.json()
+        
+        if status['status'] not in ['active', 'recovering']:
+            st.info("⚪ No active Sybil attack")
+            return
+        
+        # Status indicator
+        if status['status'] == 'active':
+            st.error("🔴 **Sybil Attack ACTIVE**")
+        else:
+            st.warning("🟡 **Recovering from Sybil Attack**")
+        
+        # Metrics
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric(
+                "Fake Nodes Created",
+                status['parameters']['num_fake_nodes']
+            )
+        
+        with col2:
+            st.metric(
+                "Currently Active",
+                status['parameters']['active_fake_nodes']
+            )
+        
+        with col3:
+            # Progress bar based on remaining fake nodes
+            total = status['parameters']['num_fake_nodes']
+            active = status['parameters']['active_fake_nodes']
+            if total > 0:
+                progress = active / total
+                st.progress(progress)
+                st.caption(f"Cleanup: {100-int(progress*100)}%")
+        
+        # Effects
+        if status.get('effects'):
+            with st.expander("📊 View Attack Effects"):
+                for effect in status['effects'][-5:]:
+                    st.caption(f"• {effect}")
+        
+        # Stop button
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            if st.button("⏹️ Stop Sybil Attack", type="secondary", use_container_width=True):
+                stop_sybil_attack()
+        
+        # Fake nodes list (sample)
+        if status.get('fake_node_ids'):
+            with st.expander("🔍 View Fake Node IDs (Sample)"):
+                sample_nodes = status['fake_node_ids'][:10]
+                for node_id in sample_nodes:
+                    st.code(node_id, language=None)
+                if len(status['fake_node_ids']) > 10:
+                    st.caption(f"... and {len(status['fake_node_ids']) - 10} more")
+                
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to load Sybil attack status: {e}")
+
+
+def stop_sybil_attack():
+    """Sybil saldırısını durdurur"""
+    try:
+        response = requests.post(f"{API_BASE}/attack/sybil/stop")
+        result = response.json()
+        
+        if response.status_code == 200:
+            st.success(f"✅ {result['message']}")
+            st.rerun()
+        else:
+            st.error(f"Failed to stop Sybil attack: {result}")
             
     except requests.exceptions.RequestException as e:
         st.error(f"API Error: {e}")

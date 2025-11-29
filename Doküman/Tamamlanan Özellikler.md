@@ -297,6 +297,84 @@ streamlit run frontend/main_old_1.py
 
 ---
 
+## MILESTONE 5: Sybil Saldırısı ✅
+
+### 5.1 Sybil Attack Implementation ✅
+**Dosya:** `backend/attacks/sybil.py`
+
+**SybilAttack sınıfı:**
+- `trigger(num_nodes)` - Saldırıyı başlat
+- `stop()` - Saldırıyı durdur
+- `get_status()` - Saldırı durumu
+- `_auto_recovery()` - Otomatik iyileşme (60 saniye)
+
+**Özellikler:**
+- Çok sayıda sahte node oluşturma (varsayılan: 20)
+- Sahte node'lara `is_sybil=True` bayrağı
+- Otomatik iyileşme (60 saniye sonra)
+- Manuel durdurma desteği
+- Kademeli node temizleme
+- Detaylı status ve effects tracking
+
+**Güncelleme:** `backend/simulator.py`
+- `_create_sybil_node()` - Sahte node oluştur
+- `_remove_sybil_node()` - Sahte node kaldır
+
+**Test:** `tests/test_sybil.py` - Sybil attack testi PASSED
+
+---
+
+### 5.2 Sybil Attack API Endpoints ✅
+**Güncelleme:** `backend/main.py`
+
+**Yeni Endpoints:**
+- `POST /attack/sybil/trigger?num_nodes=20` - Sybil saldırısını tetikle
+- `GET /attack/sybil/status` - Saldırı durumunu al
+- `POST /attack/sybil/stop` - Saldırıyı durdur
+
+**Test:** `tests/test_sybil_api.py` - API endpoint'leri PASSED
+
+---
+
+### 5.3 Network Visualizer ✅
+**Yeni dosya:** `frontend/components/network_visualizer.py`
+
+**Özellikler:**
+- streamlit-agraph ile interactive network haritasi
+- Renk kodlu node gösterimi:
+  - 🔷 Mavi: Validator
+  - 🟢 Yeşil: Regular
+  - 🔴 Kırmızı: Sybil
+  - 🟠 Turuncu: Byzantine
+- Shape'ler:
+  - dot: Normal
+  - triangleDown: Under attack
+  - diamond: Recovering
+- Mesh topology simülasyonu
+- Legend ve node istatistikleri
+
+**Güncelleme:** `frontend/components/attack_panel.py`
+- Sybil attack seçeneği eklendi
+- `trigger_sybil_attack()` - Saldırı tetikleme
+- `display_sybil_status()` - Saldırı durumu gösterimi
+- `stop_sybil_attack()` - Saldırı durdurma
+- Fake nodes slider (5-50)
+- Progress bar (cleanup durumu)
+- Fake node IDs listesi
+
+**Güncelleme:** `frontend/main.py`
+- Network Map tab'i eklendi (5 tab toplam)
+- display_network_visualizer import
+
+**Test:** Manuel UI testi - Network visualizer çalışıyor
+
+---
+
+## ✅ MILESTONE 5 Tamamlandı
+**Çıktı:** Sybil saldırısı çalışıyor, ağ haritasında görünüyor.
+
+---
+
 ## Proje Yapısı (Güncel)
 
 ```

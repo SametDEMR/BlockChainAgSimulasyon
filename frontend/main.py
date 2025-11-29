@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import get_ui_config
 from frontend.components.attack_panel import render_attack_panel
 from frontend.components.metrics_dashboard import render_metrics_dashboard
+from frontend.components.network_visualizer import display_network_visualizer
 
 ui_config = get_ui_config()
 API_URL = "http://localhost:8000"
@@ -82,7 +83,7 @@ if status:
     st.markdown("---")
     
     # Tabs for different sections
-    tab1, tab2, tab3, tab4 = st.tabs(["🎯 Attack Control", "📊 Metrics", "🔐 PBFT", "📡 Nodes"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎯 Attack Control", "📊 Metrics", "🌐 Network Map", "🔐 PBFT", "📡 Nodes"])
     
     with tab1:
         # Attack Panel
@@ -93,6 +94,10 @@ if status:
         render_metrics_dashboard()
     
     with tab3:
+        # Network Map Visualizer (NEW)
+        display_network_visualizer(API_URL)
+    
+    with tab4:
         # PBFT Status
         pbft_status = get_pbft_status()
         if pbft_status and pbft_status.get('enabled'):
@@ -121,7 +126,7 @@ if status:
         else:
             st.info("PBFT not enabled")
     
-    with tab4:
+    with tab5:
         # Nodes
         st.markdown("### 📡 Network Nodes")
         
