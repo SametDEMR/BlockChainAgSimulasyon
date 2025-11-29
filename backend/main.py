@@ -16,6 +16,7 @@ from backend.simulator import Simulator
 from backend.attacks.attack_engine import AttackEngine, AttackType
 from backend.attacks.ddos import DDoSAttack
 from backend.attacks.byzantine import ByzantineAttack
+from backend.attacks.sybil import SybilAttack
 from config import get_api_config
 
 app = FastAPI(
@@ -35,6 +36,7 @@ app.add_middleware(
 simulator = Simulator()
 attack_engine = AttackEngine()
 byzantine_attack = ByzantineAttack(simulator)
+sybil_attack = SybilAttack(simulator)
 background_tasks_list = []
 
 
@@ -279,6 +281,39 @@ async def stop_byzantine_attack():
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
     return result
+
+
+@app.post("/attack/sybil/trigger")
+async def trigger_sybil_attack(num_nodes: int = 20):
+    """Sybil saldırısını tetikle"""
+    success = await sybil_attack.trigger(num_nodes=num_nodes)
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to trigger Sybil attack")
+    return {
+        "status": "success",
+        "message": f"Sybil attack triggered with {num_nodes} fake nodes",
+        "attack_id": sybil_attack.attack_id,
+        "attack_status": sybil_attack.get_status()
+    }
+
+
+@app.get("/attack/sybil/status")
+async def get_sybil_attack_status():
+    """Sybil saldırı durumunu döndür"""
+    return sybil_attack.get_status()
+
+
+@app.post("/attack/sybil/stop")
+async def stop_sybil_attack():
+    """Sybil saldırısını durdur"""
+    success = await sybil_attack.stop()
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to stop Sybil attack")
+    return {
+        "status": "success",
+        "message": "Sybil attack stopped",
+        "attack_status": sybil_attack.get_status()
+    }
 
 
 @app.get("/metrics")
