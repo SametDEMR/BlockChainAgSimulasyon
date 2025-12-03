@@ -13,6 +13,7 @@ from config import get_ui_config
 from frontend.components.attack_panel import render_attack_panel
 from frontend.components.metrics_dashboard import render_metrics_dashboard
 from frontend.components.network_visualizer import display_network_visualizer
+from frontend.components.blockchain_visualizer import display_blockchain_visualizer, display_fork_status
 
 ui_config = get_ui_config()
 API_URL = "http://localhost:8000"
@@ -83,7 +84,7 @@ if status:
     st.markdown("---")
     
     # Tabs for different sections
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎯 Attack Control", "📊 Metrics", "🌐 Network Map", "🔐 PBFT", "📡 Nodes"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🎯 Attack Control", "📊 Metrics", "🌐 Network Map", "🔐 PBFT", "📡 Nodes", "📦 Blockchain"])
     
     with tab1:
         # Attack Panel
@@ -216,6 +217,15 @@ if status:
                 st.write(f"**Total: {len(regular)}**")
                 for node in regular:
                     st.write(f"- **{node['id']}** | {node['balance']:.2f}")
+    
+    with tab6:
+        # Blockchain Visualizer
+        display_blockchain_visualizer(API_URL)
+        
+        st.markdown("---")
+        
+        # Fork Status
+        display_fork_status(API_URL)
 
 else:
     st.error("❌ API not running. Start with: `python backend/main_old_2.py`")
