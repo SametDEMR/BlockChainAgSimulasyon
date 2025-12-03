@@ -375,6 +375,130 @@ streamlit run frontend/main_old_1.py
 
 ---
 
+## MILESTONE 6: %51 Saldırısı (Majority Attack) ✅
+
+### 6.1 Majority Attack Implementation ✅
+**Dosya:** `backend/attacks/majority_attack.py`
+
+**MajorityAttack sınıfı:**
+- `execute()` - Saldırıyı başlat
+- `stop()` - Saldırıyı durdur
+- `get_status()` - Saldırı durumu
+- `_apply_attack_effects()` - Validator'ları compromised yap
+- `_simulate_double_spend()` - Çift harcama simülasyonu
+- `_auto_recovery()` - Otomatik iyileşme (60 saniye)
+- `_resolve_fork()` - Fork çözümlemesi
+- `_cleanup_validators()` - Validator'ları temizle
+
+**Özellikler:**
+- Validator'ların %51'ini saldırgan yapma
+- `is_malicious` flag set etme
+- Trust score cezalandırma (-30)
+- Fork oluşturma simülasyonu
+- Çift harcama senaryosu
+- 60 saniyelik otomatik iyileşme
+- Manuel durdurma desteği
+
+**Güncelleme:** `backend/network/node.py`
+- `is_malicious` özelliği eklendi
+
+**Test:** `test_majority_fork.py` - Majority attack testi PASSED
+
+---
+
+### 6.2 Chain Fork Handling ✅
+**Dosya:** `backend/core/blockchain.py`
+
+**Fork Özellikleri:**
+- `fork_detected` - Fork tespit bayrağı
+- `alternative_chains` - Alternatif zincir listesi
+- `fork_history` - Fork geçmişi
+- `orphaned_blocks` - Orphan blok listesi
+
+**Fork Fonksiyonları:**
+- `detect_fork(incoming_chain)` - Fork tespit
+  - Genesis block kontrolü
+  - Farklılaşma noktası bulma
+  - Fork event kaydetme
+- `resolve_fork(incoming_chain)` - En uzun zincir kuralı
+  - Uzun zincir kazanır
+  - Kısa zincir orphan olur
+- `add_alternative_chain(chain)` - Alternatif zincir ekleme
+- `get_fork_status()` - Fork durumu
+  - Fork tespit durumu
+  - Alternatif zincir sayısı
+  - Fork event sayısı
+  - Orphan blok sayısı
+  - Son 5 fork olayı
+
+**API Endpoint:**
+- `GET /blockchain/fork-status` - Tüm node'ların fork durumu
+
+**Test:** `test_majority_fork.py` - Fork handling PASSED
+
+---
+
+### 6.3 Blockchain Visualizer ✅
+**Yeni dosya:** `frontend/components/blockchain_visualizer.py`
+
+**Özellikler:**
+- `display_blockchain_visualizer()` - Ana blockchain explorer
+  - Blockchain istatistikleri (total blocks, difficulty, pending TXs, fork events)
+  - Fork uyarısı gösterimi
+  - Blokları ters sırada gösterim (en yeni önce)
+- `display_block_card()` - Tek blok kartı
+  - Renk kodlu gösterim:
+    - 🔷 Mavi: Genesis block
+    - 🟢 Yeşil: Normal block
+    - 🔴 Kırmızı: Malicious validator block
+  - Blok detayları (hash, prev_hash, miner, transactions, nonce, time)
+  - Expandable transaction listesi
+- `display_fork_status()` - Fork durum paneli
+  - Network-wide fork durumu
+  - Node bazlı fork bilgileri
+  - Fork event sayıları
+
+**Güncelleme:** `frontend/main.py`
+- Blockchain tab'i eklendi (Tab 6)
+- Fork status paneli entegrasyonu
+
+**Test:** Manuel UI testi - Blockchain visualizer çalışıyor
+
+---
+
+### 6.4 UI'ya Majority Attack Integration ✅
+**Güncelleme:** `frontend/components/attack_panel.py`
+
+**Yeni Fonksiyonlar:**
+- `trigger_majority_attack()` - Majority saldırı tetikleme
+- `display_majority_status()` - Saldırı durum paneli
+  - Malicious/Honest validator sayıları
+  - Fork oluşturma göstergesi
+  - Compromised validator listesi
+  - Warning mesajı
+  - Stop butonu
+- `stop_majority_attack()` - Saldırıyı durdur
+
+**Güncelleme:** `frontend/components/blockchain_visualizer.py`
+- Malicious validator kontrolü
+- Node verilerini fetch etme
+- Miner'a göre blok renklendirme
+- `is_malicious` flag'ine göre kırmızı gösterim
+
+**API Endpoints:**
+- `POST /attack/majority/trigger` - Saldırı başlat
+- `GET /attack/majority/status` - Durum bilgisi
+- `POST /attack/majority/stop` - Durdur
+
+**Test:** Manuel UI testi - Majority attack panel çalışıyor
+
+---
+
+## ✅ MILESTONE 6 Tamamlandı
+**Çıktı:** %51 saldırısı çalışıyor, fork tespit ve çözümleme yapılıyor, blockchain'de malicious bloklar kırmızı görünüyor.
+
+---
+
 ## Proje Yapısı (Güncel)
 
 ```
@@ -706,9 +830,10 @@ BlockChainAgSimulasyon/
 BlockChainAgSimulasyon/
 ├── config.py                       # Merkezi yapılandırma
 ├── requirements.txt                # Bağımlılıklar
-├── test_byzantine.py                # Byzantine attack test (YENİ)
-├── test_trust_score.py              # Trust score test (YENİ)
-├── test_ui_byzantine.py             # UI test rehberi (YENİ)
+├── test_majority_fork.py            # Majority attack ve fork test (YENİ)
+├── test_byzantine.py                # Byzantine attack test
+├── test_trust_score.py              # Trust score test
+├── test_sybil.py                    # Sybil attack test
 ├── test_core.py                     # Core modül testleri
 ├── test_node.py                     # Node testleri
 ├── test_simulator.py                # Simulator testleri
@@ -718,35 +843,39 @@ BlockChainAgSimulasyon/
 ├── test_node_pbft.py                # Node+PBFT testleri
 ├── test_simulator_pbft.py           # Simulator+PBFT testleri
 ├── test_api_pbft.py                 # API PBFT endpoint testleri
-├── test_attack_engine.py            # Attack engine testleri (YENİ)
-├── test_ddos.py                     # DDoS attack testleri (YENİ)
-├── test_node_metrics.py             # Node metrics testleri (YENİ)
-├── test_api_attacks.py              # Attack API testleri (YENİ)
+├── test_attack_engine.py            # Attack engine testleri
+├── test_ddos.py                     # DDoS attack testleri
+├── test_node_metrics.py             # Node metrics testleri
+├── test_api_attacks.py              # Attack API testleri
 ├── backend/
 │   ├── __init__.py
 │   ├── main.py                     # FastAPI server (GÜNCELLENMİŞ)
-│   ├── simulator.py                # Network simülatörü (GÜNCELLENMİŞ)
+│   ├── simulator.py                # Network simülatörü
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── transaction.py
 │   │   ├── wallet.py
 │   │   ├── block.py
-│   │   └── blockchain.py
+│   │   └── blockchain.py           # Fork handling eklendi (GÜNCELLENMİŞ)
 │   ├── network/
 │   │   ├── __init__.py
-│   │   ├── node.py                 # Node sınıfı (GÜNCELLENMİŞ)
+│   │   ├── node.py                 # is_malicious eklendi (GÜNCELLENMİŞ)
 │   │   ├── message_broker.py       # MessageBroker
 │   │   └── pbft_handler.py         # PBFT Handler
 │   └── attacks/
-│       ├── __init__.py             # (GÜNCELLENMİŞ)
-│       ├── attack_engine.py        # Attack yönetimi (YENİ)
-│       ├── ddos.py                 # DDoS attack (YENİ)
-│       └── byzantine.py            # Byzantine attack (YENİ)
+│       ├── __init__.py
+│       ├── attack_engine.py        # Attack yönetimi
+│       ├── ddos.py                 # DDoS attack
+│       ├── byzantine.py            # Byzantine attack
+│       ├── sybil.py                # Sybil attack
+│       └── majority_attack.py      # Majority attack (YENİ)
 └── frontend/
-    ├── main.py                     # Streamlit UI (GÜNCELLENMİŞ)
+    ├── main.py                     # Streamlit UI (GÜNCELLENMİŞ - Tab 6 eklendi)
     └── components/
         ├── attack_panel.py         # Attack kontrol paneli (GÜNCELLENMİŞ)
-        └── metrics_dashboard.py    # Metrics dashboard (YENİ)
+        ├── metrics_dashboard.py    # Metrics dashboard
+        ├── network_visualizer.py   # Network harita
+        └── blockchain_visualizer.py # Blockchain explorer (YENİ)
 ```
 
 ---
