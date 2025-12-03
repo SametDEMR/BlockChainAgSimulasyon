@@ -18,8 +18,8 @@ def render_attack_panel():
         
         attack_type = st.selectbox(
             "Attack Type",
-            ["DDoS", "Byzantine", "Sybil", 
-             "51% Attack (Coming Soon)", "Network Partition (Coming Soon)", 
+            ["DDoS", "Byzantine", "Sybil", "Majority Attack (51%)",
+             "Network Partition (Coming Soon)", 
              "Selfish Mining (Coming Soon)"],
             key="attack_type_select"
         )
@@ -67,6 +67,8 @@ def render_attack_panel():
                     trigger_byzantine_attack(target_node_id)
                 elif attack_type == "Sybil":
                     trigger_sybil_attack(num_fake_nodes)
+                elif attack_type == "Majority Attack (51%)":
+                    trigger_majority_attack()
                 else:
                     st.warning("This attack type is not implemented yet")
         
@@ -82,6 +84,9 @@ def render_attack_panel():
         
         st.markdown("---")
         display_sybil_status()
+        
+        st.markdown("---")
+        display_majority_status()
         
         st.markdown("---")
         display_attack_history()
@@ -407,6 +412,94 @@ def stop_sybil_attack():
             st.rerun()
         else:
             st.error(f"Failed to stop Sybil attack: {result}")
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"API Error: {e}")
+
+
+def trigger_majority_attack():
+    """Majority (%51) saldırısı tetikler"""
+    try:
+        response = requests.post(f"{API_BASE}/attack/majority/trigger")
+        result = response.json()
+        
+        if response.status_code == 200:
+            st.success(f"✅ {result['message']}")
+            st.info(f"Attack ID: {result['attack_id']}")
+            st.rerun()
+        else:
+            st.error(f"Failed to trigger Majority attack: {result}")
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"API Error: {e}")
+
+
+def display_majority_status():
+    """Majority saldırı durumunu gösterir"""
+    st.markdown("#### 🔴 Majority Attack (%51) Status")
+    
+    try:
+        response = requests.get(f"{API_BASE}/attack/majority/status")
+        status = response.json()
+        
+        if not status.get('active', False):
+            st.info("⚪ No active Majority attack")
+            return
+        
+        # Status indicator
+        st.error("🔴 **Majority Attack ACTIVE - Network Compromised!**")
+        
+        # Attack metrics
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric(
+                "Malicious Validators",
+                status.get('malicious_validators', 0)
+            )
+        
+        with col2:
+            st.metric(
+                "Honest Validators",
+                status.get('honest_validators', 0)
+            )
+        
+        with col3:
+            if status.get('fork_created', False):
+                st.error("⚠️ Fork Created")
+            else:
+                st.success("✅ No Fork")
+        
+        # Malicious validator list
+        if status.get('malicious_validator_ids'):
+            with st.expander("🔍 View Compromised Validators"):
+                for validator_id in status['malicious_validator_ids']:
+                    st.markdown(f"🔴 `{validator_id}` - COMPROMISED")
+        
+        # Stop button
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            if st.button("⏹️ Stop Majority Attack", type="secondary", use_container_width=True):
+                stop_majority_attack()
+        
+        # Warning message
+        st.warning("🚨 **Warning**: Malicious validators control the network. They can approve fraudulent transactions and create alternative chains.")
+                
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to load Majority attack status: {e}")
+
+
+def stop_majority_attack():
+    """Majority saldırısını durdurur"""
+    try:
+        response = requests.post(f"{API_BASE}/attack/majority/stop")
+        result = response.json()
+        
+        if response.status_code == 200:
+            st.success(f"✅ {result['message']}")
+            st.rerun()
+        else:
+            st.error(f"Failed to stop Majority attack: {result}")
             
     except requests.exceptions.RequestException as e:
         st.error(f"API Error: {e}")

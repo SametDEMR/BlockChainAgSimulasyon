@@ -26,6 +26,11 @@ def display_blockchain_visualizer(api_url: str):
         chain = blockchain.get("chain", [])
         fork_status = blockchain.get("fork_status", {})
         
+        # Node'ları al (malicious kontrolü için)
+        nodes_response = requests.get(f"{api_url}/nodes", timeout=5)
+        nodes_data = nodes_response.json()
+        nodes = {n['id']: n for n in nodes_data.get('nodes', [])}
+        
         # Fork durumu
         if fork_status.get("fork_detected", False):
             st.error(f"⚠️ FORK DETECTED! {fork_status.get('fork_events_count', 0)} fork events")
@@ -50,18 +55,19 @@ def display_blockchain_visualizer(api_url: str):
         
         # Ters sırada göster (en yeni önce)
         for block in reversed(chain):
-            display_block_card(block)
+            display_block_card(block, nodes)
         
     except requests.exceptions.RequestException as e:
         st.error(f"Failed to fetch blockchain: {e}")
 
 
-def display_block_card(block: dict):
+def display_block_card(block: dict, nodes: dict = None):
     """
     Tek bir bloğu kart olarak göster
     
     Args:
         block: Block dictionary
+        nodes: Node'lar dictionary (miner malicious kontrolü için)
     """
     index = block.get("index", 0)
     block_hash = block.get("hash", "")[:16]
@@ -71,20 +77,27 @@ def display_block_card(block: dict):
     transactions = block.get("transactions", [])
     nonce = block.get("nonce", 0)
     
+    # Miner'in malicious olup olmadığını kontrol et
+    is_malicious = False
+    if nodes and miner in nodes:
+        is_malicious = nodes[miner].get('is_malicious', False)
+    
     # Blok rengini belirle
     is_genesis = index == 0
-    is_malicious = "Attacker" in miner or miner.startswith("node_") and False  # Placeholder
     
     # Renk şeması
     if is_genesis:
         border_color = "#00BFFF"  # Mavi - Genesis
         bg_color = "#E6F7FF"
+        status_label = "GENESIS"
     elif is_malicious:
         border_color = "#FF4444"  # Kırmızı - Malicious
         bg_color = "#FFE6E6"
+        status_label = "MALICIOUS"
     else:
         border_color = "#00CC66"  # Yeşil - Normal
         bg_color = "#E6FFE6"
+        status_label = "NORMAL"
     
     # Timestamp formatla
     time_str = datetime.fromtimestamp(timestamp).strftime("%H:%M:%S")
@@ -110,7 +123,7 @@ def display_block_card(block: dict):
                 font-weight: bold;
                 font-size: 12px;
             ">
-                {'GENESIS' if is_genesis else 'NORMAL'}
+                {status_label}
             </span>
         </div>
         
