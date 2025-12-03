@@ -18,6 +18,7 @@ from backend.attacks.ddos import DDoSAttack
 from backend.attacks.byzantine import ByzantineAttack
 from backend.attacks.sybil import SybilAttack
 from backend.attacks.majority_attack import MajorityAttack
+from backend.attacks.network_partition import NetworkPartition
 from config import get_api_config
 
 app = FastAPI(
@@ -39,6 +40,7 @@ attack_engine = AttackEngine()
 byzantine_attack = ByzantineAttack(simulator)
 sybil_attack = SybilAttack(simulator)
 majority_attack = MajorityAttack(simulator, attack_engine)
+network_partition = NetworkPartition(simulator, attack_engine)
 background_tasks_list = []
 
 
@@ -368,6 +370,42 @@ async def stop_majority_attack():
         "status": "success",
         "message": "Majority attack stopped",
         "attack_status": majority_attack.get_status()
+    }
+
+
+@app.post("/attack/partition/trigger")
+async def trigger_partition_attack():
+    """Network Partition saldırısını tetikle"""
+    try:
+        attack_id = await network_partition.execute()
+        return {
+            "status": "success",
+            "message": "Network partition attack triggered",
+            "attack_id": attack_id,
+            "attack_status": network_partition.get_status()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/attack/partition/status")
+async def get_partition_attack_status():
+    """Network Partition saldırı durumunu döndür"""
+    status = network_partition.get_status()
+    # MessageBroker partition durumunu da ekle
+    partition_info = simulator.message_broker.get_partition_status()
+    status["message_broker_partition"] = partition_info
+    return status
+
+
+@app.post("/attack/partition/stop")
+async def stop_partition_attack():
+    """Network Partition saldırısını durdur"""
+    network_partition.stop()
+    return {
+        "status": "success",
+        "message": "Network partition attack stopped",
+        "attack_status": network_partition.get_status()
     }
 
 

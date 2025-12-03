@@ -49,6 +49,7 @@ class Node:
         self.is_byzantine = False
         self.is_sybil = False
         self.is_malicious = False  # Majority attack için
+        self.partition_group = None  # "A", "B" veya None (Network partition için)
         
         # Metrikler
         self.cpu_usage = 20  # %

@@ -51,9 +51,15 @@ class MessageBroker:
         # Her node için mesaj kuyruğu
         self.message_queues: Dict[str, List[Message]] = {}
         
+        # Network partition desteği
+        self.partition_active = False
+        self.group_a_ids = set()
+        self.group_b_ids = set()
+        
         # İstatistikler
         self.total_messages_sent = 0
         self.total_broadcasts = 0
+        self.blocked_messages = 0  # Partition nedeniyle bloke edilen mesajlar
         
     def register_node(self, node_id: str):
         """Yeni node kaydı"""
@@ -76,6 +82,16 @@ class MessageBroker:
             message_type: Mesaj tipi
             content: Mesaj içeriği
         """
+        # Partition kontrolü - farklı gruplara mesaj gitmez
+        if self.partition_active:
+            sender_in_a = sender_id in self.group_a_ids
+            receiver_in_a = receiver_id in self.group_a_ids
+            
+            # Farklı gruplardaysa mesaj bloke et
+            if sender_in_a != receiver_in_a:
+                self.blocked_messages += 1
+                return  # Mesaj gönderilmez
+        
         # Network delay simülasyonu
         delay = random.uniform(self.min_delay, self.max_delay)
         await asyncio.sleep(delay)
@@ -211,3 +227,37 @@ class MessageBroker:
                 msg_dict['in_queue_of'] = node_id
                 all_messages.append(msg_dict)
         return all_messages
+    
+    def set_partition(self, group_a_ids: set, group_b_ids: set):
+        """
+        Network partition'u aktif et - iki grup arasında iletişim kesilir
+        
+        Args:
+            group_a_ids: Grup A node ID'leri
+            group_b_ids: Grup B node ID'leri
+        """
+        self.partition_active = True
+        self.group_a_ids = group_a_ids
+        self.group_b_ids = group_b_ids
+    
+    def clear_partition(self):
+        """
+        Network partition'ı kaldır - tüm node'lar tekrar iletişim kurabilir
+        """
+        self.partition_active = False
+        self.group_a_ids.clear()
+        self.group_b_ids.clear()
+    
+    def get_partition_status(self) -> Dict:
+        """
+        Partition durumunu döndür
+        
+        Returns:
+            Partition bilgileri
+        """
+        return {
+            'active': self.partition_active,
+            'group_a_size': len(self.group_a_ids),
+            'group_b_size': len(self.group_b_ids),
+            'blocked_messages': self.blocked_messages
+        }
