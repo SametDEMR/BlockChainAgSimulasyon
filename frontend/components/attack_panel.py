@@ -19,7 +19,7 @@ def render_attack_panel():
         attack_type = st.selectbox(
             "Attack Type",
             ["DDoS", "Byzantine", "Sybil", "Majority Attack (51%)",
-             "Network Partition (Coming Soon)", 
+             "Network Partition", 
              "Selfish Mining (Coming Soon)"],
             key="attack_type_select"
         )
@@ -69,6 +69,8 @@ def render_attack_panel():
                     trigger_sybil_attack(num_fake_nodes)
                 elif attack_type == "Majority Attack (51%)":
                     trigger_majority_attack()
+                elif attack_type == "Network Partition":
+                    trigger_partition_attack()
                 else:
                     st.warning("This attack type is not implemented yet")
         
@@ -87,6 +89,9 @@ def render_attack_panel():
         
         st.markdown("---")
         display_majority_status()
+        
+        st.markdown("---")
+        display_partition_status()
         
         st.markdown("---")
         display_attack_history()
@@ -500,6 +505,102 @@ def stop_majority_attack():
             st.rerun()
         else:
             st.error(f"Failed to stop Majority attack: {result}")
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"API Error: {e}")
+
+
+def trigger_partition_attack():
+    """Network Partition saldırısı tetikler"""
+    try:
+        response = requests.post(f"{API_BASE}/attack/partition/trigger")
+        result = response.json()
+        
+        if response.status_code == 200:
+            st.success(f"✅ {result['message']}")
+            st.info(f"Attack ID: {result['attack_id']}")
+            st.rerun()
+        else:
+            st.error(f"Failed to trigger Network Partition: {result}")
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"API Error: {e}")
+
+
+def display_partition_status():
+    """Network Partition saldırı durumunu gösterir"""
+    st.markdown("#### 🔶 Network Partition Status")
+    
+    try:
+        response = requests.get(f"{API_BASE}/attack/partition/status")
+        status = response.json()
+        
+        if not status.get('active', False):
+            st.info("⚪ No active Network Partition")
+            return
+        
+        # Status indicator
+        st.error("🔴 **Network Partition ACTIVE - Network Split!**")
+        
+        # Partition metrics
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric(
+                "Group A Nodes",
+                status.get('group_a_size', 0)
+            )
+        
+        with col2:
+            st.metric(
+                "Group B Nodes",
+                status.get('group_b_size', 0)
+            )
+        
+        with col3:
+            if status.get('message_broker_partition', {}).get('active', False):
+                blocked = status['message_broker_partition'].get('blocked_messages', 0)
+                st.metric("Blocked Messages", blocked)
+        
+        # Group lists
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if status.get('group_a_ids'):
+                with st.expander("🔵 View Group A Nodes"):
+                    for node_id in status['group_a_ids']:
+                        st.markdown(f"🔵 `{node_id}`")
+        
+        with col2:
+            if status.get('group_b_ids'):
+                with st.expander("🟢 View Group B Nodes"):
+                    for node_id in status['group_b_ids']:
+                        st.markdown(f"🟢 `{node_id}`")
+        
+        # Stop button
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            if st.button("⏹️ Stop Partition", type="secondary", use_container_width=True):
+                stop_partition_attack()
+        
+        # Warning message
+        st.warning("🚨 **Warning**: Network is split into two isolated partitions. Nodes cannot communicate across partitions. Parallel chains may form.")
+                
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to load Partition status: {e}")
+
+
+def stop_partition_attack():
+    """Network Partition saldırısını durdurur"""
+    try:
+        response = requests.post(f"{API_BASE}/attack/partition/stop")
+        result = response.json()
+        
+        if response.status_code == 200:
+            st.success(f"✅ {result['message']}")
+            st.rerun()
+        else:
+            st.error(f"Failed to stop Partition: {result}")
             
     except requests.exceptions.RequestException as e:
         st.error(f"API Error: {e}")

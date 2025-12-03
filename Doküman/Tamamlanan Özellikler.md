@@ -554,6 +554,258 @@ BlockChainAgSimulasyon/
 - 10 node (4 validator, 6 regular)
 - MessageBroker ile asenkron mesajlaşma
 - Network delay simülasyonu (0.1-0.3 saniye)
+- Network partition desteği (grup izolasyonu)
+- Otomatik blok üretimi (5 saniye)
+- Otomatik PBFT mesaj işleme (0.5 saniye)
+
+### API
+- FastAPI (async)
+- CORS enabled
+- 2 background task (production + PBFT)
+- RESTful endpoints
+- PBFT monitoring endpoints
+- Attack endpoints (DDoS, Byzantine, Sybil, Majority, Partition)
+
+### Frontend
+- Streamlit
+- Real-time updates (2 saniye)
+- PBFT status göstergeleri
+- Message traffic monitoring
+- Network partition görselleştirme
+- Blockchain explorer
+- Responsive design
+
+---
+
+## MILESTONE 7: Network Partition ✅
+
+### 7.1 Partition Attack Implementation ✅
+**Dosya:** `backend/attacks/network_partition.py`
+
+**NetworkPartition sınıfı:**
+- `execute()` - Partition'u başlat
+- `stop()` - Partition'u durdur
+- `get_status()` - Partition durumu
+- `_apply_partition()` - Ağı ikiye böl
+- `_auto_recovery()` - Otomatik iyileşme (45 saniye)
+
+**Özellikler:**
+- Ağı ikiye bölme (Group A ve Group B)
+- Her node'a `partition_group` ataması ("A" veya "B")
+- MessageBroker'da partition aktive
+- Farklı gruplara mesaj bloklama
+- 45 saniyelik otomatik iyileşme
+- Manuel durdurma desteği
+
+**Güncelleme:** `backend/network/message_broker.py`
+- `set_partition(group_a_ids, group_b_ids)` - Partition aktif et
+- `clear_partition()` - Partition kaldır
+- `get_partition_status()` - Partition bilgisi
+- `send_message()` - Farklı gruplara mesaj bloke et
+- `blocked_messages` - Bloke edilen mesaj sayısı
+
+**Güncelleme:** `backend/network/node.py`
+- `partition_group` özelliği eklendi (None, "A" veya "B")
+
+**Test:** `tests/run_partition_test.py` - Partition attack testi PASSED
+
+---
+
+### 7.2 Partition Resolution ✅
+**Güncelleme:** `backend/attacks/network_partition.py`
+
+**`_merge_partitions()` iyileştirildi:**
+- Her grubun en uzun zincirini bul
+- Winner/loser grup belirleme
+- Winner chain'in node'unu seç
+- Loser node'larda `detect_fork()` çağır
+- Loser node'larda `resolve_fork()` ile winner chain kabul et
+- Orphan block sayısını hesapla
+- Tüm node'lar winner chain'e senkronize
+
+**Fork Handling:**
+- En uzun zincir kazanır (longest chain rule)
+- Kısa zincir orphan olur
+- Fork detection ve logging
+- `blockchain.get_fork_status()` - Fork bilgisi
+
+**Test:** `tests/run_partition_resolution_test.py` - Resolution testi PASSED
+
+---
+
+### 7.3 UI Partition Göstergesi ✅
+**Güncelleme:** `frontend/components/attack_panel.py`
+
+**Yeni Fonksiyonlar:**
+- `trigger_partition_attack()` - Partition tetikleme
+- `display_partition_status()` - Partition durum paneli
+  - Group A/B node sayıları
+  - Blocked messages metriği
+  - Group A/B node listeleri (expandable)
+  - Warning mesajı
+  - Stop butonu
+- `stop_partition_attack()` - Partition durdur
+
+**API Endpoints:**
+- `POST /attack/partition/trigger` - Partition başlat
+- `GET /attack/partition/status` - Durum bilgisi
+- `POST /attack/partition/stop` - Durdur
+
+**Test:** `tests/run_partition_ui_test.py` - UI integration testi PASSED
+
+---
+
+## ✅ MILESTONE 7 Tamamlandı
+**Çıktı:** Network partition çalışıyor, merge işlemi yapılıyor, orphan blocklar işaretleniyor, UI'da gösteriliyor.
+
+---
+
+## Proje Yapısı (Güncel)
+
+```
+BlockChainAgSimulasyon/
+├── config.py                       # Merkezi yapılandırma
+├── requirements.txt                # Bağımlılıklar
+├── test_majority_fork.py            # Majority attack ve fork test
+├── test_byzantine.py                # Byzantine attack test
+├── test_trust_score.py              # Trust score test
+├── test_sybil.py                    # Sybil attack test
+├── test_core.py                     # Core modül testleri
+├── test_node.py                     # Node testleri
+├── test_simulator.py                # Simulator testleri
+├── test_api.py                      # API testleri
+├── test_message_broker.py           # MessageBroker testleri
+├── test_pbft_handler.py             # PBFT handler testleri
+├── test_node_pbft.py                # Node+PBFT testleri
+├── test_simulator_pbft.py           # Simulator+PBFT testleri
+├── test_api_pbft.py                 # API PBFT endpoint testleri
+├── test_attack_engine.py            # Attack engine testleri
+├── test_ddos.py                     # DDoS attack testleri
+├── test_node_metrics.py             # Node metrics testleri
+├── test_api_attacks.py              # Attack API testleri
+├── tests/
+│   ├── run_partition_test.py        # Partition attack test (YENİ)
+│   ├── run_partition_resolution_test.py # Partition resolution test (YENİ)
+│   └── run_partition_ui_test.py     # Partition UI test (YENİ)
+├── backend/
+│   ├── __init__.py
+│   ├── main.py                     # FastAPI server (GÜNCELLENMİŞ)
+│   ├── simulator.py                # Network simülatörü
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── transaction.py
+│   │   ├── wallet.py
+│   │   ├── block.py
+│   │   └── blockchain.py           # Fork handling eklendi
+│   ├── network/
+│   │   ├── __init__.py
+│   │   ├── node.py                 # partition_group eklendi (GÜNCELLENMİŞ)
+│   │   ├── message_broker.py       # Partition desteği (GÜNCELLENMİŞ)
+│   │   └── pbft_handler.py         # PBFT Handler
+│   └── attacks/
+│       ├── __init__.py
+│       ├── attack_engine.py        # Attack yönetimi
+│       ├── ddos.py                 # DDoS attack
+│       ├── byzantine.py            # Byzantine attack
+│       ├── sybil.py                # Sybil attack
+│       ├── majority_attack.py      # Majority attack
+│       └── network_partition.py    # Network Partition (YENİ)
+└── frontend/
+    ├── main.py                     # Streamlit UI
+    └── components/
+        ├── attack_panel.py         # Attack kontrol paneli (GÜNCELLENMİŞ)
+        ├── metrics_dashboard.py    # Metrics dashboard
+        ├── network_visualizer.py   # Network harita
+        └── blockchain_visualizer.py # Blockchain explorer
+```
+
+---
+
+## Test Sonuçları
+
+### MILESTONE 1 ✅
+- ✅ **Core Modules:** Transaction, Wallet, Block, Blockchain - PASSED
+- ✅ **Node System:** Node creation, mining, sync - PASSED
+- ✅ **Simulator:** Node management, auto-production - PASSED
+- ✅ **API:** All endpoints responding - PASSED
+- ✅ **UI:** Frontend loads and displays data - PASSED
+
+### MILESTONE 2 ✅
+- ✅ **MessageBroker:** Messaging, broadcast, delay simulation - PASSED
+- ✅ **PBFT Handler:** 4-phase protocol, view change, Byzantine scenario - PASSED
+- ✅ **Node+PBFT:** Integration, propose, process messages - PASSED
+- ✅ **Simulator+PBFT:** Full integration, auto-production - PASSED
+- ✅ **API PBFT:** New endpoints, PBFT monitoring - PASSED
+- ✅ **UI PBFT:** Status panels, message traffic, validator details - PASSED
+
+### MILESTONE 3 ✅
+- ✅ **Attack Engine:** Attack management system - PASSED
+- ✅ **DDoS Attack:** DDoS implementation and effects - PASSED
+- ✅ **Node Metrics:** Metrics system and tracking - PASSED
+- ✅ **Attack API:** Attack endpoints working - PASSED
+- ✅ **UI Attack Panel:** Attack control interface - PASSED
+- ✅ **UI Metrics:** Metrics dashboard and visualization - PASSED
+
+### MILESTONE 4 ✅
+- ✅ **Byzantine Attack:** Byzantine node implementation - PASSED
+- ✅ **Trust Score:** Automatic trust score system - PASSED
+- ✅ **Byzantine Detection:** Fake hash detection working - PASSED
+- ✅ **UI Byzantine:** Byzantine attack panel and indicators - PASSED
+- ✅ **UI Trust Score:** Trust score visualization with colors - PASSED
+- ✅ **UI Validator Tab:** Enhanced validator display - PASSED
+
+### MILESTONE 5 ✅
+- ✅ **Sybil Attack:** Sybil attack implementation - PASSED
+- ✅ **Fake Nodes:** Sahte node oluşturma - PASSED
+- ✅ **Network Visualizer:** streamlit-agraph ile ağ haritası - PASSED
+- ✅ **UI Sybil Panel:** Sybil attack control ve gösterge - PASSED
+
+### MILESTONE 6 ✅
+- ✅ **Majority Attack:** %51 attack implementation - PASSED
+- ✅ **Fork Handling:** Fork detection ve resolution - PASSED
+- ✅ **Blockchain Visualizer:** Zincir görselleştirme - PASSED
+- ✅ **UI Majority Panel:** Majority attack control - PASSED
+
+### MILESTONE 7 ✅
+- ✅ **Network Partition:** Partition attack implementation - PASSED
+- ✅ **Partition Resolution:** Merge ve longest chain - PASSED
+- ✅ **UI Partition Panel:** Partition attack control ve görselleştirme - PASSED
+
+---
+
+## Sonraki Adımlar
+
+**MILESTONE 8: Selfish Mining**
+- Selfish mining implementation
+- Private chain tutma
+- Public chain'den önde olma
+- Reveal strategy
+
+**MILESTONE 9: Test ve İyileştirme**
+- Unit testler
+- Integration testler
+- Performans optimizasyonu
+- UI polish
+
+---
+
+### Kriptografi
+- RSA 2048-bit key pairs
+- SHA256 hashing
+- PSS padding (imza için)
+
+### Konsensüs
+- **Validator'lar:** PBFT (Practical Byzantine Fault Tolerance)
+  - 4 fazlı protokol
+  - 2f+1 voting
+  - View change mekanizması
+- **Regular Node'lar:** Proof of Work (4 leading zeros)
+- Mining reward: 50 coins
+
+### Network
+- 10 node (4 validator, 6 regular)
+- MessageBroker ile asenkron mesajlaşma
+- Network delay simülasyonu (0.1-0.3 saniye)
 - Otomatik blok üretimi (5 saniye)
 - Otomatik PBFT mesaj işleme (0.5 saniye)
 
