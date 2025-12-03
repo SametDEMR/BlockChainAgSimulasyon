@@ -9,7 +9,7 @@ from datetime import datetime
 
 def display_blockchain_visualizer(api_url: str):
     """
-    Blockchain'i görselleştir
+    Blockchain'i görselleştir - Public ve Private chain'leri göster
     
     Args:
         api_url: Backend API URL'i
@@ -26,14 +26,27 @@ def display_blockchain_visualizer(api_url: str):
         chain = blockchain.get("chain", [])
         fork_status = blockchain.get("fork_status", {})
         
-        # Node'ları al (malicious kontrolü için)
+        # Node'ları al (malicious ve selfish miner kontrolü için)
         nodes_response = requests.get(f"{api_url}/nodes", timeout=5)
         nodes_data = nodes_response.json()
         nodes = {n['id']: n for n in nodes_data.get('nodes', [])}
         
+        # Selfish mining status al
+        selfish_status = None
+        try:
+            selfish_response = requests.get(f"{api_url}/attack/selfish/status", timeout=5)
+            if selfish_response.status_code == 200:
+                selfish_status = selfish_response.json()
+        except:
+            pass
+        
         # Fork durumu
         if fork_status.get("fork_detected", False):
             st.error(f"⚠️ FORK DETECTED! {fork_status.get('fork_events_count', 0)} fork events")
+        
+        # Selfish mining aktif ise uyarı
+        if selfish_status and selfish_status.get('active', False):
+            st.warning(f"🟠 SELFISH MINING ACTIVE | Advantage: +{selfish_status.get('advantage', 0)} blocks")
         
         # Blockchain istatistikleri
         col1, col2, col3, col4 = st.columns(4)
@@ -47,6 +60,29 @@ def display_blockchain_visualizer(api_url: str):
             st.metric("Fork Events", fork_status.get("fork_events_count", 0))
         
         st.divider()
+        
+        # Selfish mining aktif ise private chain göster
+        if selfish_status and selfish_status.get('active', False):
+            target_node_id = selfish_status.get('target_node')
+            if target_node_id and target_node_id in nodes:
+                target_node = nodes[target_node_id]
+                
+                # Private chain'i göster
+                st.subheader("🟠 Private Chain (Selfish Miner)")
+                st.info(f"Selfish Miner: {target_node_id} | Private: {selfish_status.get('private_chain_length', 0)} blocks | Public: {selfish_status.get('public_chain_length', 0)} blocks")
+                
+                # Private chain bloklarini fetch et (node detail'den)
+                try:
+                    node_response = requests.get(f"{api_url}/nodes/{target_node_id}", timeout=5)
+                    if node_response.status_code == 200:
+                        node_detail = node_response.json()
+                        # Private chain varsa göster (simdi sadece indicator)
+                        st.success(f"🔒 Private Chain: {selfish_status.get('private_chain_length', 0)} blocks (hidden from network)")
+                except:
+                    pass
+        
+        # Public chain'i göster
+        st.subheader("🟢 Public Chain")
         
         # Blokları göster
         if not chain:

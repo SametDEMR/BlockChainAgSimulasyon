@@ -20,15 +20,23 @@ def render_attack_panel():
             "Attack Type",
             ["DDoS", "Byzantine", "Sybil", "Majority Attack (51%)",
              "Network Partition", 
-             "Selfish Mining (Coming Soon)"],
+             "Selfish Mining"],
             key="attack_type_select"
         )
         
         node_options = [f"{node['id']} ({node['role']})" for node in nodes]
         
-        # Target selection (sadece DDoS ve Byzantine için)
+        # Target selection (sadece DDoS, Byzantine ve Selfish Mining için)
         target_node_id = None
-        if attack_type in ["DDoS", "Byzantine"]:
+        if attack_type in ["DDoS", "Byzantine", "Selfish Mining"]:
+            # Selfish Mining için sadece regular node'lar
+            if attack_type == "Selfish Mining":
+                regular_nodes = [n for n in nodes if n['role'] == 'regular']
+                if not regular_nodes:
+                    st.warning("No regular nodes available for Selfish Mining")
+                    return
+                node_options = [f"{node['id']} ({node['role']})" for node in regular_nodes]
+            
             target_selection = st.selectbox(
                 "Target Node",
                 node_options,
@@ -71,6 +79,8 @@ def render_attack_panel():
                     trigger_majority_attack()
                 elif attack_type == "Network Partition":
                     trigger_partition_attack()
+                elif attack_type == "Selfish Mining":
+                    trigger_selfish_mining_attack(target_node_id)
                 else:
                     st.warning("This attack type is not implemented yet")
         
@@ -92,6 +102,9 @@ def render_attack_panel():
         
         st.markdown("---")
         display_partition_status()
+        
+        st.markdown("---")
+        display_selfish_mining_status()
         
         st.markdown("---")
         display_attack_history()
@@ -601,6 +614,118 @@ def stop_partition_attack():
             st.rerun()
         else:
             st.error(f"Failed to stop Partition: {result}")
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"API Error: {e}")
+
+
+def trigger_selfish_mining_attack(target_node_id: str):
+    """Selfish Mining saldırısı tetikler"""
+    try:
+        response = requests.post(f"{API_BASE}/attack/selfish/trigger", params={"target_node_id": target_node_id})
+        result = response.json()
+        
+        if response.status_code == 200:
+            st.success(f"✅ {result['message']}")
+            st.info(f"Target: {result['target_node']} | Duration: {result['duration']}s | Reveal Threshold: {result['reveal_threshold']} blocks")
+            st.rerun()
+        else:
+            st.error(f"Failed to trigger Selfish Mining: {result}")
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"API Error: {e}")
+
+
+def display_selfish_mining_status():
+    """Selfish Mining saldırı durumunu gösterir"""
+    st.markdown("#### 🟠 Selfish Mining Status")
+    
+    try:
+        response = requests.get(f"{API_BASE}/attack/selfish/status")
+        status = response.json()
+        
+        if not status.get('active', False):
+            st.info("⚪ No active Selfish Mining")
+            return
+        
+        # Status indicator
+        st.error("🔴 **Selfish Mining ACTIVE - Private Chain Hidden!**")
+        
+        # Attack metrics
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric(
+                "Target Node",
+                status.get('target_node', 'N/A')
+            )
+        
+        with col2:
+            st.metric(
+                "Private Chain",
+                f"{status.get('private_chain_length', 0)} blocks"
+            )
+        
+        with col3:
+            st.metric(
+                "Public Chain",
+                f"{status.get('public_chain_length', 0)} blocks"
+            )
+        
+        with col4:
+            advantage = status.get('advantage', 0)
+            if advantage >= status.get('reveal_threshold', 2):
+                st.error(f"+{advantage} ⚠️")
+            else:
+                st.metric("Advantage", f"+{advantage}")
+        
+        # Progress metrics
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Blocks Mined (Private)", status.get('blocks_mined_private', 0))
+        
+        with col2:
+            st.metric("Blocks Revealed", status.get('blocks_revealed', 0))
+        
+        with col3:
+            elapsed = status.get('elapsed_time', 0)
+            remaining = status.get('remaining_time', 0)
+            st.metric("Remaining Time", f"{remaining:.1f}s")
+        
+        # Progress bar
+        if status.get('attack_duration', 0) > 0:
+            progress = elapsed / status['attack_duration']
+            st.progress(min(1.0, progress))
+        
+        # Stop button
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            if st.button("⏹️ Stop Selfish Mining", type="secondary", use_container_width=True):
+                stop_selfish_mining_attack()
+        
+        # Warning message
+        if advantage >= status.get('reveal_threshold', 2):
+            st.warning("🚨 **Warning**: Selfish miner is about to reveal private chain! Public chain will be orphaned.")
+        else:
+            st.info(f"🔒 Private chain is {advantage} blocks ahead. Will reveal at +{status.get('reveal_threshold', 2)} blocks.")
+                
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to load Selfish Mining status: {e}")
+
+
+def stop_selfish_mining_attack():
+    """Selfish Mining saldırısını durdurur"""
+    try:
+        response = requests.post(f"{API_BASE}/attack/selfish/stop")
+        result = response.json()
+        
+        if response.status_code == 200:
+            st.success(f"✅ {result['message']}")
+            st.info(f"Total Mined: {result.get('blocks_mined_private', 0)} | Total Revealed: {result.get('blocks_revealed', 0)}")
+            st.rerun()
+        else:
+            st.error(f"Failed to stop Selfish Mining: {result}")
             
     except requests.exceptions.RequestException as e:
         st.error(f"API Error: {e}")
