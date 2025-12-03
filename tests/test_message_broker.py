@@ -1,171 +1,128 @@
 """
-Message Broker Test
+Message Broker Test - Pytest Format
 """
-
+import pytest
 import asyncio
-import sys
-import os
-
-# Proje root'unu path'e ekle
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from backend.network.message_broker import MessageBroker
 
 
-async def test_message_broker():
-    """Message Broker testleri"""
+class TestMessageBroker:
+    """MessageBroker temel testleri"""
     
-    print("=" * 60)
-    print("MESSAGE BROKER TEST")
-    print("=" * 60)
+    def test_broker_creation(self):
+        """Broker oluşturma"""
+        broker = MessageBroker(min_delay=0.01, max_delay=0.05)
+        assert broker is not None
+        stats = broker.get_stats()
+        assert stats['registered_nodes'] == 0
     
-    # 1. MessageBroker oluştur
-    print("\n1. MessageBroker oluşturuluyor...")
-    broker = MessageBroker(min_delay=0.01, max_delay=0.05)  # Hızlı test için kısa delay
-    print("✓ MessageBroker oluşturuldu")
+    def test_node_registration(self, message_broker):
+        """Node kayıt testi"""
+        node_ids = ['node1', 'node2', 'node3']
+        for node_id in node_ids:
+            message_broker.register_node(node_id)
+        
+        stats = message_broker.get_stats()
+        assert stats['registered_nodes'] == 3
     
-    # 2. Node'ları kaydet
-    print("\n2. Node'lar kaydediliyor...")
-    node_ids = ['node1', 'node2', 'node3', 'node4']
-    for node_id in node_ids:
-        broker.register_node(node_id)
-        print(f"✓ {node_id} kaydedildi")
-    
-    stats = broker.get_stats()
-    print(f"\nKayıtlı node sayısı: {stats['registered_nodes']}")
-    
-    # 3. Tek bir node'a mesaj gönder
-    print("\n3. node1'den node2'ye mesaj gönderiliyor...")
-    await broker.send_message(
-        sender_id='node1',
-        receiver_id='node2',
-        message_type='test_message',
-        content={'data': 'Hello node2!'}
-    )
-    print("✓ Mesaj gönderildi (network delay ile)")
-    
-    # Mesajı kontrol et
-    messages = broker.peek_messages_for_node('node2')
-    print(f"node2'nin kuyruğunda {len(messages)} mesaj var")
-    if messages:
-        msg = messages[0]
-        print(f"  - Gönderen: {msg.sender_id}")
-        print(f"  - Tip: {msg.message_type}")
-        print(f"  - İçerik: {msg.content}")
-    
-    # 4. Broadcast mesajı
-    print("\n4. node1'den tüm node'lara broadcast...")
-    await broker.broadcast(
-        sender_id='node1',
-        message_type='broadcast_test',
-        content={'data': 'Hello everyone!'},
-        exclude_sender=True
-    )
-    print("✓ Broadcast tamamlandı")
-    
-    # Her node'un kuyruğunu kontrol et
-    print("\nHer node'un kuyruk durumu:")
-    for node_id in node_ids:
-        queue_size = broker.get_queue_size(node_id)
-        print(f"  {node_id}: {queue_size} mesaj")
-    
-    # 5. Mesajları al
-    print("\n5. node2 mesajlarını alıyor...")
-    messages = broker.get_messages_for_node('node2')
-    print(f"✓ {len(messages)} mesaj alındı")
-    for i, msg in enumerate(messages):
-        print(f"  Mesaj {i+1}: {msg.message_type} - {msg.content['data']}")
-    
-    # Kuyruk temizlendi mi?
-    queue_size = broker.get_queue_size('node2')
-    print(f"node2'nin kuyruğu temizlendi: {queue_size} mesaj kaldı")
-    
-    # 6. Tip filtrelemesi
-    print("\n6. Tip filtreli mesaj alma...")
-    # Önce farklı tipte mesajlar gönder
-    await broker.send_message('node1', 'node3', 'type_a', {'msg': 'A1'})
-    await broker.send_message('node1', 'node3', 'type_b', {'msg': 'B1'})
-    await broker.send_message('node1', 'node3', 'type_a', {'msg': 'A2'})
-    
-    print("node3'e 3 mesaj gönderildi (2 type_a, 1 type_b)")
-    
-    # Sadece type_a'ları al
-    type_a_messages = broker.get_messages_for_node('node3', message_type='type_a')
-    print(f"✓ type_a mesajları alındı: {len(type_a_messages)} adet")
-    
-    # type_b hala kuyrukta mı?
-    remaining = broker.get_queue_size('node3')
-    print(f"node3'te kalan mesaj: {remaining} adet")
-    
-    # 7. İstatistikler
-    print("\n7. Son İstatistikler:")
-    stats = broker.get_stats()
-    print(f"  Toplam gönderilen mesaj: {stats['total_messages_sent']}")
-    print(f"  Toplam broadcast: {stats['total_broadcasts']}")
-    print(f"  Kayıtlı node: {stats['registered_nodes']}")
-    print(f"  Bekleyen mesaj: {stats['total_pending_messages']}")
-    
-    # 8. Tüm mesajları görüntüle
-    print("\n8. Tüm bekleyen mesajlar:")
-    all_messages = broker.get_all_messages()
-    for msg in all_messages:
-        print(f"  [{msg['in_queue_of']}] {msg['message_type']} from {msg['sender_id']}")
-    
-    # 9. Temizlik
-    print("\n9. Tüm kuyruklar temizleniyor...")
-    broker.clear_all_queues()
-    stats = broker.get_stats()
-    print(f"✓ Temizlendi. Bekleyen mesaj: {stats['total_pending_messages']}")
-    
-    print("\n" + "=" * 60)
-    print("TEST TAMAMLANDI!")
-    print("=" * 60)
+    def test_node_unregistration(self, message_broker):
+        """Node kayıt silme testi"""
+        message_broker.register_node('node1')
+        message_broker.unregister_node('node1')
+        
+        stats = message_broker.get_stats()
+        assert stats['registered_nodes'] == 0
 
 
-async def test_network_delay():
-    """Network delay simülasyonu testi"""
+@pytest.mark.asyncio
+class TestMessageBrokerAsync:
+    """MessageBroker async testleri"""
     
-    print("\n" + "=" * 60)
-    print("NETWORK DELAY TEST")
-    print("=" * 60)
+    async def test_send_message(self, message_broker):
+        """Mesaj gönderme testi"""
+        message_broker.register_node('node1')
+        message_broker.register_node('node2')
+        
+        await message_broker.send_message(
+            sender_id='node1',
+            receiver_id='node2',
+            message_type='test',
+            content={'data': 'test_message'}
+        )
+        
+        messages = message_broker.peek_messages_for_node('node2')
+        assert len(messages) == 1
+        assert messages[0].message_type == 'test'
     
-    broker = MessageBroker(min_delay=0.1, max_delay=0.3)
+    async def test_broadcast(self, message_broker):
+        """Broadcast testi"""
+        nodes = ['node1', 'node2', 'node3']
+        for node_id in nodes:
+            message_broker.register_node(node_id)
+        
+        await message_broker.broadcast(
+            sender_id='node1',
+            message_type='broadcast_test',
+            content={'data': 'broadcast'},
+            exclude_sender=True
+        )
+        
+        # node1 hariç diğerleri mesaj almış olmalı
+        assert message_broker.get_queue_size('node1') == 0
+        assert message_broker.get_queue_size('node2') == 1
+        assert message_broker.get_queue_size('node3') == 1
     
-    # Node'ları kaydet
-    for i in range(5):
-        broker.register_node(f'node{i}')
+    async def test_get_messages(self, message_broker):
+        """Mesaj alma testi"""
+        message_broker.register_node('node1')
+        message_broker.register_node('node2')
+        
+        await message_broker.send_message('node1', 'node2', 'test', {})
+        
+        messages = message_broker.get_messages_for_node('node2')
+        assert len(messages) == 1
+        
+        # Kuyruk temizlenmeli
+        assert message_broker.get_queue_size('node2') == 0
     
-    print("\n5 node'a broadcast gönderiliyor...")
-    print("Network delay: 0.1-0.3 saniye")
-    
-    import time
-    start = time.time()
-    
-    await broker.broadcast(
-        sender_id='node0',
-        message_type='test',
-        content={'data': 'test'},
-        exclude_sender=True
-    )
-    
-    end = time.time()
-    elapsed = end - start
-    
-    print(f"✓ Broadcast tamamlandı")
-    print(f"Geçen süre: {elapsed:.3f} saniye")
-    print(f"(Beklenen: ~0.1-0.3 saniye - paralel gönderim sayesinde)")
-    
-    # Her node'a mesaj ulaştı mı?
-    print("\nMesaj dağılımı:")
-    for i in range(5):
-        node_id = f'node{i}'
-        count = broker.get_queue_size(node_id)
-        print(f"  {node_id}: {count} mesaj")
+    async def test_message_type_filter(self, message_broker):
+        """Tip filtreli mesaj alma testi"""
+        message_broker.register_node('node1')
+        
+        await message_broker.send_message('node0', 'node1', 'type_a', {})
+        await message_broker.send_message('node0', 'node1', 'type_b', {})
+        await message_broker.send_message('node0', 'node1', 'type_a', {})
+        
+        # Sadece type_a'ları al
+        type_a_messages = message_broker.get_messages_for_node('node1', message_type='type_a')
+        assert len(type_a_messages) == 2
+        
+        # type_b hala kuyrukta olmalı
+        assert message_broker.get_queue_size('node1') == 1
 
 
-if __name__ == "__main__":
-    # Ana test
-    asyncio.run(test_message_broker())
+class TestMessageBrokerPartition:
+    """Partition özellikleri testi"""
     
-    # Network delay testi
-    asyncio.run(test_network_delay())
+    def test_set_partition(self, message_broker):
+        """Partition set testi"""
+        nodes_a = ['node1', 'node2']
+        nodes_b = ['node3', 'node4']
+        
+        for node_id in nodes_a + nodes_b:
+            message_broker.register_node(node_id)
+        
+        message_broker.set_partition(nodes_a, nodes_b)
+        
+        status = message_broker.get_partition_status()
+        assert status['active'] is True
+        assert len(status['group_a']) == 2
+        assert len(status['group_b']) == 2
+    
+    def test_clear_partition(self, message_broker):
+        """Partition clear testi"""
+        message_broker.set_partition(['node1'], ['node2'])
+        message_broker.clear_partition()
+        
+        status = message_broker.get_partition_status()
+        assert status['active'] is False

@@ -1,13 +1,7 @@
 """
-Blockchain Core Modules Test Script
-Tüm core modülleri test eder
+Blockchain Core Modules Test - Pytest Format
 """
-import sys
-import os
-
-# Path ayarı
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
+import pytest
 from backend.core.wallet import Wallet
 from backend.core.transaction import Transaction
 from backend.core.block import Block
@@ -15,185 +9,186 @@ from backend.core.blockchain import Blockchain
 import time
 
 
-def test_wallet():
-    """Wallet modülünü test et"""
-    print("\n" + "=" * 60)
-    print("TEST: WALLET MODULE")
-    print("=" * 60)
+class TestWallet:
+    """Wallet modülü testleri"""
     
-    wallet1 = Wallet()
-    wallet2 = Wallet()
+    def test_wallet_creation(self):
+        """Wallet oluşturma testi"""
+        wallet = Wallet()
+        assert wallet.address is not None
+        assert len(wallet.address) > 0
+        assert wallet.balance == 0
+        assert wallet.private_key is not None
+        assert wallet.public_key is not None
     
-    print(f"✅ Wallet 1: {wallet1.address[:20]}... | Balance: {wallet1.balance}")
-    print(f"✅ Wallet 2: {wallet2.address[:20]}... | Balance: {wallet2.balance}")
-    
-    return wallet1, wallet2
+    def test_wallet_uniqueness(self):
+        """Her wallet'ın unique olduğunu test et"""
+        wallet1 = Wallet()
+        wallet2 = Wallet()
+        assert wallet1.address != wallet2.address
 
 
-def test_transaction(wallet1, wallet2):
-    """Transaction modülünü test et"""
-    print("\n" + "=" * 60)
-    print("TEST: TRANSACTION MODULE")
-    print("=" * 60)
+class TestTransaction:
+    """Transaction modülü testleri"""
     
-    tx = Transaction(
-        sender=wallet1.address,
-        receiver=wallet2.address,
-        amount=50
-    )
+    def test_transaction_creation(self, wallet):
+        """Transaction oluşturma testi"""
+        wallet2 = Wallet()
+        tx = Transaction(
+            sender=wallet.address,
+            receiver=wallet2.address,
+            amount=50
+        )
+        assert tx.sender == wallet.address
+        assert tx.receiver == wallet2.address
+        assert tx.amount == 50
+        assert tx.transaction_id is not None
     
-    print(f"✅ Transaction Created: {tx.transaction_id[:20]}...")
-    print(f"   {wallet1.address[:10]}... -> {wallet2.address[:10]}... : {tx.amount}")
-    
-    # İmzala
-    wallet1.sign_transaction(tx)
-    print(f"✅ Transaction Signed: {tx.signature is not None}")
-    
-    # Doğrula
-    is_valid = tx.verify(wallet1.get_public_key_pem())
-    print(f"✅ Signature Valid: {is_valid}")
-    
-    return tx
-
-
-def test_block(tx):
-    """Block modülünü test et"""
-    print("\n" + "=" * 60)
-    print("TEST: BLOCK MODULE")
-    print("=" * 60)
-    
-    # Coinbase transaction
-    coinbase = Transaction("COINBASE", "Miner123", 50)
-    coinbase.sign(None)
-    
-    block = Block(
-        index=1,
-        timestamp=time.time(),
-        transactions=[coinbase, tx],
-        previous_hash="0" * 64,
-        miner="Miner123"
-    )
-    
-    print(f"✅ Block Created: #{block.index}")
-    print(f"   Transactions: {len(block.transactions)}")
-    print(f"   Hash (before mining): {block.hash[:20]}...")
-    
-    # Mining
-    print(f"⛏️  Mining block (difficulty=4)...")
-    block.mine_block(4)
-    
-    print(f"✅ Block Mined!")
-    print(f"   Hash: {block.hash[:20]}...")
-    print(f"   Nonce: {block.nonce}")
-    print(f"   Starts with 0000: {block.hash.startswith('0000')}")
-    
-    return block
-
-
-def test_blockchain():
-    """Blockchain modülünü test et"""
-    print("\n" + "=" * 60)
-    print("TEST: BLOCKCHAIN MODULE")
-    print("=" * 60)
-    
-    blockchain = Blockchain()
-    
-    print(f"✅ Blockchain Created: {len(blockchain.chain)} blocks")
-    print(f"   Difficulty: {blockchain.difficulty}")
-    print(f"   Mining Reward: {blockchain.mining_reward}")
-    
-    # Genesis block
-    genesis = blockchain.get_latest_block()
-    print(f"✅ Genesis Block: #{genesis.index} | Hash: {genesis.hash[:20]}...")
-    
-    # Transaction'lar ekle
-    wallet1 = Wallet()
-    wallet2 = Wallet()
-    
-    tx1 = Transaction(wallet1.address, wallet2.address, 30)
-    wallet1.sign_transaction(tx1)
-    
-    tx2 = Transaction(wallet2.address, wallet1.address, 10)
-    wallet2.sign_transaction(tx2)
-    
-    blockchain.add_transaction(tx1)
-    blockchain.add_transaction(tx2)
-    
-    print(f"✅ Transactions Added: {len(blockchain.pending_transactions)} pending")
-    
-    # Mining
-    print(f"⛏️  Mining block for Miner123...")
-    new_block = blockchain.mine_pending_transactions("Miner123")
-    
-    print(f"✅ Block Mined: #{new_block.index}")
-    print(f"   Hash: {new_block.hash[:20]}...")
-    print(f"   Transactions in block: {len(new_block.transactions)}")
-    
-    # Bakiyeler
-    print(f"\n💰 Balances:")
-    print(f"   Miner123: {blockchain.get_balance('Miner123')}")
-    print(f"   Wallet1: {blockchain.get_balance(wallet1.address)}")
-    print(f"   Wallet2: {blockchain.get_balance(wallet2.address)}")
-    
-    # Zincir doğrulama
-    is_valid = blockchain.is_valid()
-    print(f"\n✅ Blockchain Valid: {is_valid}")
-    
-    # Bir blok daha mine et
-    tx3 = Transaction(wallet1.address, wallet2.address, 5)
-    wallet1.sign_transaction(tx3)
-    blockchain.add_transaction(tx3)
-    
-    new_block2 = blockchain.mine_pending_transactions("Miner456")
-    print(f"\n✅ Second Block Mined: #{new_block2.index}")
-    print(f"   Total Blocks: {len(blockchain.chain)}")
-    
-    # Son bakiyeler
-    print(f"\n💰 Final Balances:")
-    print(f"   Miner123: {blockchain.get_balance('Miner123')}")
-    print(f"   Miner456: {blockchain.get_balance('Miner456')}")
-    print(f"   Wallet1: {blockchain.get_balance(wallet1.address)}")
-    print(f"   Wallet2: {blockchain.get_balance(wallet2.address)}")
-    
-    return blockchain
-
-
-def main():
-    """Ana test fonksiyonu"""
-    print("\n")
-    print("*" * 60)
-    print("BLOCKCHAIN CORE MODULES - INTEGRATION TEST")
-    print("*" * 60)
-    
-    try:
-        # Wallet testi
-        wallet1, wallet2 = test_wallet()
+    def test_transaction_signing_and_verification(self, wallet):
+        """Transaction imzalama ve doğrulama testi"""
+        wallet2 = Wallet()
+        tx = Transaction(
+            sender=wallet.address,
+            receiver=wallet2.address,
+            amount=50
+        )
         
-        # Transaction testi
-        tx = test_transaction(wallet1, wallet2)
+        # İmzala
+        wallet.sign_transaction(tx)
+        assert tx.signature is not None
         
-        # Block testi
-        block = test_block(tx)
-        
-        # Blockchain testi
-        blockchain = test_blockchain()
-        
-        print("\n" + "=" * 60)
-        print("✅ ALL TESTS PASSED!")
-        print("=" * 60)
-        print(f"\nFinal Blockchain State:")
-        print(f"  Blocks: {len(blockchain.chain)}")
-        print(f"  Chain Valid: {blockchain.is_valid()}")
-        print(f"  Pending Transactions: {len(blockchain.pending_transactions)}")
-        
-    except Exception as e:
-        print("\n" + "=" * 60)
-        print("❌ TEST FAILED!")
-        print("=" * 60)
-        print(f"Error: {e}")
-        import traceback
-        traceback.print_exc()
+        # Doğrula
+        is_valid = tx.verify(wallet.get_public_key_pem())
+        assert is_valid is True
 
 
-if __name__ == "__main__":
-    main()
+class TestBlock:
+    """Block modülü testleri"""
+    
+    def test_block_creation(self, wallet):
+        """Block oluşturma testi"""
+        coinbase = Transaction("COINBASE", wallet.address, 50)
+        coinbase.sign(None)
+        
+        block = Block(
+            index=1,
+            timestamp=time.time(),
+            transactions=[coinbase],
+            previous_hash="0" * 64,
+            miner=wallet.address
+        )
+        
+        assert block.index == 1
+        assert len(block.transactions) == 1
+        assert block.previous_hash == "0" * 64
+        assert block.miner == wallet.address
+    
+    def test_block_mining(self, wallet):
+        """Block mining testi"""
+        coinbase = Transaction("COINBASE", wallet.address, 50)
+        coinbase.sign(None)
+        
+        block = Block(
+            index=1,
+            timestamp=time.time(),
+            transactions=[coinbase],
+            previous_hash="0" * 64,
+            miner=wallet.address
+        )
+        
+        # Mine et
+        block.mine_block(difficulty=2)
+        
+        assert block.hash is not None
+        assert block.hash.startswith("00")
+        assert block.nonce > 0
+
+
+class TestBlockchain:
+    """Blockchain modülü testleri"""
+    
+    def test_blockchain_creation(self):
+        """Blockchain oluşturma testi"""
+        blockchain = Blockchain()
+        assert len(blockchain.chain) == 1  # Genesis block
+        assert blockchain.difficulty == 4
+        assert blockchain.mining_reward == 50
+    
+    def test_blockchain_mining(self):
+        """Blockchain mining testi"""
+        blockchain = Blockchain()
+        wallet1 = Wallet()
+        wallet2 = Wallet()
+        
+        # Transaction ekle
+        tx = Transaction(wallet1.address, wallet2.address, 30)
+        wallet1.sign_transaction(tx)
+        blockchain.add_transaction(tx)
+        
+        assert len(blockchain.pending_transactions) == 1
+        
+        # Mine et
+        miner_address = "Miner123"
+        new_block = blockchain.mine_pending_transactions(miner_address)
+        
+        assert new_block is not None
+        assert new_block.index == 1
+        assert len(blockchain.chain) == 2
+    
+    def test_blockchain_validation(self):
+        """Blockchain geçerlilik testi"""
+        blockchain = Blockchain()
+        wallet1 = Wallet()
+        
+        # Birkaç blok mine et
+        for i in range(3):
+            blockchain.mine_pending_transactions(wallet1.address)
+        
+        # Zincir geçerli mi?
+        assert blockchain.is_valid() is True
+    
+    def test_balance_calculation(self):
+        """Bakiye hesaplama testi"""
+        blockchain = Blockchain()
+        wallet1 = Wallet()
+        wallet2 = Wallet()
+        
+        # Mining reward al
+        blockchain.mine_pending_transactions(wallet1.address)
+        
+        # Balance kontrol
+        balance1 = blockchain.get_balance(wallet1.address)
+        assert balance1 == 50  # Mining reward
+
+
+class TestBlockchainIntegration:
+    """Tüm modüllerin entegrasyon testi"""
+    
+    def test_full_workflow(self):
+        """Tam işlem akışı testi"""
+        # Blockchain ve wallet'lar oluştur
+        blockchain = Blockchain()
+        wallet1 = Wallet()
+        wallet2 = Wallet()
+        
+        # İlk mining - wallet1'e reward
+        blockchain.mine_pending_transactions(wallet1.address)
+        assert blockchain.get_balance(wallet1.address) == 50
+        
+        # Transaction oluştur ve gönder
+        tx = Transaction(wallet1.address, wallet2.address, 20)
+        wallet1.sign_transaction(tx)
+        blockchain.add_transaction(tx)
+        
+        # İkinci mining
+        blockchain.mine_pending_transactions("Miner2")
+        
+        # Bakiyeleri kontrol et
+        balance1 = blockchain.get_balance(wallet1.address)
+        balance2 = blockchain.get_balance(wallet2.address)
+        
+        assert balance1 == 30  # 50 - 20
+        assert balance2 == 20
+        
+        # Zincir geçerli mi?
+        assert blockchain.is_valid() is True

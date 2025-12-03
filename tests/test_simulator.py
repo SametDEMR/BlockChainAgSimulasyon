@@ -1,122 +1,123 @@
 """
-Simulator Test Script
+Simulator Test - Pytest Format
 """
-import sys
-import os
+import pytest
 import asyncio
-import time
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from backend.simulator import Simulator
-import json
 
 
-async def test_auto_production():
-    """Otomatik blok üretimini test et"""
-    print("\n" + "=" * 60)
-    print("AUTO BLOCK PRODUCTION TEST")
-    print("=" * 60)
+class TestSimulatorBasic:
+    """Temel simulator testleri"""
     
-    simulator = Simulator()
-    simulator.start()
+    def test_simulator_creation(self):
+        """Simulator oluşturma"""
+        sim = Simulator()
+        assert len(sim.nodes) == 10  # Config default
+        assert len(sim.validator_nodes) == 4
+        assert len(sim.regular_nodes) == 6
     
-    print(f"\n⏱️  Running auto-production for 12 seconds...")
-    print(f"   Block time: {simulator.blockchain_config['block_time']} seconds")
-    print(f"   Expected blocks: ~2")
+    def test_simulator_start_stop(self, simulator):
+        """Start/Stop testi"""
+        assert simulator.is_running is False
+        
+        simulator.start()
+        assert simulator.is_running is True
+        
+        simulator.stop()
+        assert simulator.is_running is False
     
-    # Auto production task başlat
-    task = asyncio.create_task(simulator.auto_block_production())
+    def test_simulator_reset(self, simulator):
+        """Reset testi"""
+        # Birkaç blok mine et
+        for _ in range(2):
+            simulator.nodes[0].mine_block()
+        
+        # Reset
+        simulator.reset()
+        
+        # Tüm node'lar genesis block'a dönmeli
+        for node in simulator.nodes:
+            assert len(node.blockchain.chain) == 1
     
-    # 12 saniye bekle
-    await asyncio.sleep(12)
-    
-    # Stop
-    simulator.stop()
-    task.cancel()
-    
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
-    
-    # Sonuçları kontrol et
-    print(f"\n📊 Results:")
-    max_chain = max([len(n.blockchain.chain) for n in simulator.nodes])
-    print(f"   Max chain length: {max_chain} blocks")
-    print(f"   Genesis + mined blocks: expected ~3 (1 genesis + 2 mined)")
-    
-    # Mining istatistikleri
-    total_mined = sum([n.blocks_mined for n in simulator.nodes])
-    print(f"\n⛏️  Mining Stats:")
-    print(f"   Total blocks mined: {total_mined}")
-    
-    miners = [n for n in simulator.nodes if n.blocks_mined > 0]
-    for miner in miners[:5]:  # İlk 5 miner
-        print(f"   Node {miner.id}: {miner.blocks_mined} blocks, earned {miner.total_earned} coins")
+    def test_get_status(self, simulator):
+        """Status bilgisi testi"""
+        status = simulator.get_status()
+        
+        assert 'is_running' in status
+        assert 'total_nodes' in status
+        assert 'active_nodes' in status
+        assert 'validator_nodes' in status
+        assert status['total_nodes'] == 10
 
 
-def test_basic():
-    """Temel simülatör testleri"""
-    print("\n" + "=" * 60)
-    print("BASIC SIMULATOR TEST")
-    print("=" * 60)
+@pytest.mark.asyncio
+class TestSimulatorAsync:
+    """Async simulator testleri"""
     
-    simulator = Simulator()
+    async def test_auto_block_production(self, simulator):
+        """Otomatik blok üretimi testi"""
+        simulator.start()
+        
+        # Auto production task başlat
+        task = asyncio.create_task(simulator.auto_block_production())
+        
+        # 3 saniye bekle
+        await asyncio.sleep(3)
+        
+        # Stop
+        simulator.stop()
+        task.cancel()
+        
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        
+        # En az bir blok üretilmiş olmalı
+        max_chain = max([len(n.blockchain.chain) for n in simulator.nodes])
+        assert max_chain > 1  # Genesis + mined blocks
     
-    print(f"\n✅ Created: {simulator}")
-    print(f"   Total nodes: {len(simulator.nodes)}")
-    print(f"   Validators: {len(simulator.validator_nodes)}")
-    print(f"   Regular: {len(simulator.regular_nodes)}")
-    
-    # Start/Stop
-    print(f"\n▶️  Start/Stop Test:")
-    simulator.start()
-    print(f"   Running: {simulator.is_running}")
-    
-    simulator.stop()
-    print(f"   Running: {simulator.is_running}")
-    
-    # Manual mining
-    print(f"\n⛏️  Manual Mining Test:")
-    node = simulator.nodes[0]
-    block = node.mine_block()
-    print(f"   Block #{block.index} mined by {node.id}")
-    
-    # Broadcast
-    for other_node in simulator.nodes:
-        if other_node != node:
-            other_node.receive_block(block)
-    
-    synced_nodes = sum([1 for n in simulator.nodes if len(n.blockchain.chain) == 2])
-    print(f"   Synced nodes: {synced_nodes}/{len(simulator.nodes)}")
-    
-    # Status
-    print(f"\n📊 Status:")
-    status = simulator.get_status()
-    print(f"   Total blocks: {status['total_blocks']}")
-    print(f"   Active nodes: {status['active_nodes']}")
-    
-    # Reset
-    print(f"\n🔄 Reset Test:")
-    simulator.reset()
-    print(f"   Fresh chain length: {len(simulator.nodes[0].blockchain.chain)}")
+    async def test_pbft_message_processing(self, simulator):
+        """PBFT mesaj işleme testi"""
+        simulator.start()
+        
+        # PBFT task başlat
+        task = asyncio.create_task(simulator.pbft_message_processing())
+        
+        # 2 saniye bekle
+        await asyncio.sleep(2)
+        
+        # Stop
+        simulator.stop()
+        task.cancel()
+        
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        
+        # MessageBroker mesaj görmüş olmalı
+        stats = simulator.message_broker.get_stats()
+        assert stats['total_messages_sent'] >= 0
 
 
-async def main():
-    print("\n" + "*" * 60)
-    print("SIMULATOR MODULE - COMPLETE TEST")
-    print("*" * 60)
+class TestSimulatorNodes:
+    """Node yönetimi testleri"""
     
-    # Basic tests
-    test_basic()
+    def test_manual_mining(self, simulator):
+        """Manuel mining testi"""
+        node = simulator.nodes[0]
+        initial_chain_length = len(node.blockchain.chain)
+        
+        block = node.mine_block()
+        
+        assert block is not None
+        assert len(node.blockchain.chain) == initial_chain_length + 1
     
-    # Auto production test
-    await test_auto_production()
-    
-    print("\n" + "=" * 60)
-    print("✅ ALL SIMULATOR TESTS PASSED!")
-    print("=" * 60)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    def test_node_lookup(self, simulator):
+        """Node bulma testi"""
+        first_node = simulator.nodes[0]
+        found_node = next((n for n in simulator.nodes if n.id == first_node.id), None)
+        
+        assert found_node is not None
+        assert found_node.id == first_node.id

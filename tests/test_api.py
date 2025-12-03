@@ -1,139 +1,154 @@
 """
-API Test Script
-API endpoint'lerini test eder
+API Tests - Pytest Format
+Not: Bu testler çalışan bir API sunucusu gerektirir
+Sunucuyu başlatın: python backend/main.py
 """
+import pytest
 import requests
 import time
-import json
-
-BASE_URL = "http://localhost:8000"
 
 
-def test_health_check():
-    """Health check testi"""
-    print("\n" + "=" * 60)
-    print("TEST: Health Check")
-    print("=" * 60)
+@pytest.mark.api
+class TestAPIBasic:
+    """Temel API endpoint testleri"""
     
-    response = requests.get(f"{BASE_URL}/")
-    print(f"Status: {response.status_code}")
-    print(f"Response: {json.dumps(response.json(), indent=2)}")
-    assert response.status_code == 200
-
-
-def test_status():
-    """Status endpoint testi"""
-    print("\n" + "=" * 60)
-    print("TEST: Get Status")
-    print("=" * 60)
+    def test_health_check(self, api_base_url):
+        """Health check endpoint"""
+        try:
+            response = requests.get(f"{api_base_url}/")
+            assert response.status_code == 200
+            data = response.json()
+            assert 'message' in data
+        except requests.exceptions.ConnectionError:
+            pytest.skip("API server not running")
     
-    response = requests.get(f"{BASE_URL}/status")
-    print(f"Status: {response.status_code}")
-    data = response.json()
-    print(f"Response:")
-    print(f"  Total Nodes: {data['total_nodes']}")
-    print(f"  Active Nodes: {data['active_nodes']}")
-    print(f"  Validators: {data['validator_nodes']}")
-    print(f"  Running: {data['is_running']}")
-    assert response.status_code == 200
-
-
-def test_nodes():
-    """Nodes endpoint testi"""
-    print("\n" + "=" * 60)
-    print("TEST: Get Nodes")
-    print("=" * 60)
+    def test_status_endpoint(self, api_base_url):
+        """Status endpoint"""
+        try:
+            response = requests.get(f"{api_base_url}/status")
+            assert response.status_code == 200
+            data = response.json()
+            assert 'total_nodes' in data
+            assert 'is_running' in data
+        except requests.exceptions.ConnectionError:
+            pytest.skip("API server not running")
     
-    response = requests.get(f"{BASE_URL}/nodes")
-    print(f"Status: {response.status_code}")
-    data = response.json()
-    print(f"Total Nodes: {data['total_nodes']}")
-    print(f"First 3 nodes:")
-    for node in data['nodes'][:3]:
-        print(f"  - {node['id']} ({node['role']}) - {node['status']}")
-    assert response.status_code == 200
+    def test_nodes_endpoint(self, api_base_url):
+        """Nodes endpoint"""
+        try:
+            response = requests.get(f"{api_base_url}/nodes")
+            assert response.status_code == 200
+            data = response.json()
+            assert 'nodes' in data
+            assert 'total_nodes' in data
+        except requests.exceptions.ConnectionError:
+            pytest.skip("API server not running")
 
 
-def test_blockchain():
-    """Blockchain endpoint testi"""
-    print("\n" + "=" * 60)
-    print("TEST: Get Blockchain")
-    print("=" * 60)
+@pytest.mark.api
+class TestAPIControl:
+    """API kontrol endpoint testleri"""
     
-    response = requests.get(f"{BASE_URL}/blockchain")
-    print(f"Status: {response.status_code}")
-    data = response.json()
-    print(f"Chain Length: {data['chain_length']}")
-    print(f"Difficulty: {data['chain']['difficulty']}")
-    assert response.status_code == 200
-
-
-def test_start_stop():
-    """Start/Stop testi"""
-    print("\n" + "=" * 60)
-    print("TEST: Start/Stop Simulator")
-    print("=" * 60)
+    def test_start_stop(self, api_base_url):
+        """Start/Stop simulator"""
+        try:
+            # Start
+            response = requests.post(f"{api_base_url}/start")
+            assert response.status_code == 200
+            data = response.json()
+            assert data['is_running'] is True
+            
+            time.sleep(1)
+            
+            # Stop
+            response = requests.post(f"{api_base_url}/stop")
+            assert response.status_code == 200
+            data = response.json()
+            assert data['is_running'] is False
+        except requests.exceptions.ConnectionError:
+            pytest.skip("API server not running")
     
-    # Start
-    response = requests.post(f"{BASE_URL}/start")
-    print(f"Start Status: {response.status_code}")
-    data = response.json()
-    print(f"  Running: {data['is_running']}")
-    assert data['is_running'] == True
+    def test_reset(self, api_base_url):
+        """Reset simulator"""
+        try:
+            response = requests.post(f"{api_base_url}/reset")
+            assert response.status_code == 200
+            data = response.json()
+            assert 'message' in data
+        except requests.exceptions.ConnectionError:
+            pytest.skip("API server not running")
+
+
+@pytest.mark.api
+class TestAPIPBFT:
+    """PBFT API endpoint testleri"""
     
-    time.sleep(1)
+    def test_network_nodes(self, api_base_url):
+        """Network nodes endpoint"""
+        try:
+            response = requests.get(f"{api_base_url}/network/nodes")
+            assert response.status_code == 200
+            data = response.json()
+            assert 'total_nodes' in data
+            assert 'nodes' in data
+        except requests.exceptions.ConnectionError:
+            pytest.skip("API server not running")
     
-    # Stop
-    response = requests.post(f"{BASE_URL}/stop")
-    print(f"Stop Status: {response.status_code}")
-    data = response.json()
-    print(f"  Running: {data['is_running']}")
-    assert data['is_running'] == False
-
-
-def test_reset():
-    """Reset testi"""
-    print("\n" + "=" * 60)
-    print("TEST: Reset Simulator")
-    print("=" * 60)
+    def test_network_messages(self, api_base_url):
+        """Network messages endpoint"""
+        try:
+            response = requests.get(f"{api_base_url}/network/messages")
+            assert response.status_code == 200
+            data = response.json()
+            assert 'total_messages' in data
+        except requests.exceptions.ConnectionError:
+            pytest.skip("API server not running")
     
-    response = requests.post(f"{BASE_URL}/reset")
-    print(f"Status: {response.status_code}")
-    data = response.json()
-    print(f"Message: {data['message']}")
-    print(f"Total Nodes: {data['total_nodes']}")
-    assert response.status_code == 200
+    def test_pbft_status(self, api_base_url):
+        """PBFT status endpoint"""
+        try:
+            response = requests.get(f"{api_base_url}/pbft/status")
+            assert response.status_code == 200
+            data = response.json()
+            assert 'enabled' in data
+        except requests.exceptions.ConnectionError:
+            pytest.skip("API server not running")
 
 
-def main():
-    print("\n" + "*" * 60)
-    print("API ENDPOINTS TEST")
-    print("*" * 60)
-    print("\nMake sure API server is running:")
-    print("  python backend/main_old_1.py")
-    print("\n" + "*" * 60)
+@pytest.mark.api
+class TestAPIAttacks:
+    """Attack API endpoint testleri"""
     
-    try:
-        test_health_check()
-        test_status()
-        test_nodes()
-        test_blockchain()
-        test_start_stop()
-        test_reset()
-        
-        print("\n" + "=" * 60)
-        print("✅ ALL API TESTS PASSED!")
-        print("=" * 60)
-        
-    except requests.exceptions.ConnectionError:
-        print("\n❌ ERROR: Cannot connect to API server")
-        print("Please start the server first:")
-        print("  python backend/main_old_1.py")
-    except AssertionError as e:
-        print(f"\n❌ TEST FAILED: {e}")
-    except Exception as e:
-        print(f"\n❌ UNEXPECTED ERROR: {e}")
-
-
-if __name__ == "__main__":
-    main()
+    def test_attack_trigger(self, api_base_url):
+        """Attack trigger endpoint"""
+        try:
+            # İlk önce nodes al
+            response = requests.get(f"{api_base_url}/nodes")
+            nodes = response.json()['nodes']
+            if not nodes:
+                pytest.skip("No nodes available")
+            
+            target_node = nodes[0]['id']
+            
+            # Attack tetikle
+            attack_data = {
+                "attack_type": "ddos",
+                "target_node_id": target_node,
+                "parameters": {"intensity": "low"}
+            }
+            response = requests.post(f"{api_base_url}/attack/trigger", json=attack_data)
+            assert response.status_code == 200
+            data = response.json()
+            assert 'attack_id' in data
+        except requests.exceptions.ConnectionError:
+            pytest.skip("API server not running")
+    
+    def test_attack_status(self, api_base_url):
+        """Attack status endpoint"""
+        try:
+            response = requests.get(f"{api_base_url}/attack/status")
+            assert response.status_code == 200
+            data = response.json()
+            assert 'statistics' in data
+        except requests.exceptions.ConnectionError:
+            pytest.skip("API server not running")

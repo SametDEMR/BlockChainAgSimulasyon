@@ -1,86 +1,112 @@
 """
-Node Module Test Script
+Node Module Test - Pytest Format
 """
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
+import pytest
 from backend.network.node import Node
-import json
 
 
-def main():
-    print("=" * 60)
-    print("NODE MODULE TEST")
-    print("=" * 60)
+class TestNode:
+    """Node modülü testleri"""
     
-    # Nodes oluştur
-    node1 = Node(role="regular")
-    node2 = Node(role="validator")
-    node3 = Node(role="validator")
+    def test_node_creation_regular(self):
+        """Regular node oluşturma"""
+        node = Node(role="regular")
+        assert node.role == "regular"
+        assert node.is_active is True
+        assert node.status == "healthy"
+        assert node.pbft is None  # Regular node PBFT yok
     
-    print(f"\n✅ Nodes Created:")
-    print(f"  {node1}")
-    print(f"  {node2}")
-    print(f"  {node3}")
+    def test_node_creation_validator(self, message_broker):
+        """Validator node oluşturma"""
+        node = Node(role="validator", total_validators=4, message_broker=message_broker)
+        assert node.role == "validator"
+        assert node.pbft is not None  # Validator PBFT var
     
-    # İlk mining - node1
-    print(f"\n⛏️  Node1 mining block...")
-    block1 = node1.mine_block()
-    print(f"  Block #{block1.index} mined by {node1.id}")
-    print(f"  Node1 balance: {node1.blockchain.get_balance(node1.wallet.address)}")
+    def test_node_mining(self, node):
+        """Node mining testi"""
+        block = node.mine_block()
+        assert block is not None
+        assert block.index > 0
+        assert node.blocks_mined == 1
     
-    # Transaction oluştur
-    print(f"\n📝 Node1 creating transaction to Node2...")
-    tx = node1.create_transaction(node2.wallet.address, 25)
-    if tx:
-        print(f"  Transaction: {tx.amount} coins")
-        print(f"  Pending txs: {len(node1.blockchain.pending_transactions)}")
+    def test_node_transaction_creation(self):
+        """Transaction oluşturma testi"""
+        node1 = Node(role="regular")
+        node2 = Node(role="regular")
+        
+        # İlk mining (reward için)
+        node1.mine_block()
+        
+        # Transaction oluştur
+        tx = node1.create_transaction(node2.wallet.address, 25)
+        assert tx is not None
+        assert tx.amount == 25
+        assert len(node1.blockchain.pending_transactions) == 1
     
-    # İkinci mining - node2
-    print(f"\n⛏️  Node2 mining block...")
-    block2 = node2.mine_block()
-    print(f"  Block #{block2.index} mined by {node2.id}")
+    def test_node_sync(self):
+        """Blockchain senkronizasyonu testi"""
+        node1 = Node(role="regular")
+        node2 = Node(role="regular")
+        
+        # node1 birkaç blok mine et
+        for _ in range(3):
+            node1.mine_block()
+        
+        # node2 sync yap
+        initial_length = len(node2.blockchain.chain)
+        node2.sync_blockchain(node1.blockchain)
+        
+        assert len(node2.blockchain.chain) > initial_length
+        assert len(node2.blockchain.chain) == len(node1.blockchain.chain)
     
-    # Balances
-    print(f"\n💰 Balances:")
-    print(f"  Node1: {node1.blockchain.get_balance(node1.wallet.address)}")
-    print(f"  Node2: {node2.blockchain.get_balance(node2.wallet.address)}")
+    def test_node_metrics(self, node):
+        """Node metrics testi"""
+        metrics = node.get_metrics()
+        
+        assert 'cpu_usage' in metrics
+        assert 'memory_usage' in metrics
+        assert 'response_time' in metrics
+        assert 'trust_score' in metrics
+        assert metrics['trust_score'] == 100  # Initial
     
-    # Node sync
-    print(f"\n🔄 Syncing Node3 with Node2's blockchain...")
-    print(f"  Node3 chain before: {len(node3.blockchain.chain)} blocks")
-    node3.sync_blockchain(node2.blockchain)
-    print(f"  Node3 chain after: {len(node3.blockchain.chain)} blocks")
+    def test_node_byzantine_flag(self, node):
+        """Byzantine flag testi"""
+        assert node.is_byzantine is False
+        
+        node.set_byzantine(True)
+        assert node.is_byzantine is True
+        assert node.status == "under_attack"
     
-    # Node status
-    print(f"\n📊 Node1 Full Status:")
-    print(json.dumps(node1.get_status(), indent=2))
+    def test_node_under_attack(self, node):
+        """Under attack status testi"""
+        initial_response_time = node.response_time
+        
+        node.set_under_attack()
+        
+        assert node.status == "under_attack"
+        assert node.response_time > initial_response_time
     
-    # Byzantine test
-    print(f"\n⚠️  Byzantine Attack Test:")
-    node2.set_byzantine(True)
-    print(f"  Node2 is Byzantine: {node2.is_byzantine}")
-    print(f"  Status: {node2.status}")
-    print(f"  Trust Score: {node2.trust_score}")
-    
-    # DDoS test
-    print(f"\n⚠️  DDoS Attack Test:")
-    print(f"  Node3 response time before: {node3.response_time}ms")
-    node3.set_under_attack()
-    print(f"  Node3 response time after: {node3.response_time}ms")
-    print(f"  Status: {node3.status}")
-    
-    # Recovery
-    print(f"\n🔄 Recovery Test:")
-    node3.recover()
-    print(f"  Node3 status: {node3.status}")
-    print(f"  Node3 response time: {node3.response_time}ms")
-    
-    print("\n" + "=" * 60)
-    print("✅ ALL NODE TESTS PASSED!")
-    print("=" * 60)
+    def test_node_recovery(self, node):
+        """Recovery testi"""
+        node.set_under_attack()
+        assert node.status == "under_attack"
+        
+        node.recover()
+        
+        assert node.status == "healthy"
+        assert node.response_time == 50.0  # Default value
 
 
-if __name__ == "__main__":
-    main()
+class TestNodeStatus:
+    """Node status fonksiyonları testi"""
+    
+    def test_get_status(self, node):
+        """get_status() testi"""
+        status = node.get_status()
+        
+        assert 'id' in status
+        assert 'role' in status
+        assert 'status' in status
+        assert 'metrics' in status
+        assert 'chain_length' in status
+        assert status['is_active'] is True

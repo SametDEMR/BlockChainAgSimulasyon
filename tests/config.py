@@ -6,7 +6,7 @@ Merkezi yapılandırma dosyası - tüm sistem parametreleri burada tanımlanır
 CONFIG = {
     # Network Configuration
     'network': {
-        'total_nodes': 10,           # Toplam node sayısı
+        'total_nodes': 100,           # Toplam node sayısı
         'validator_nodes': 4,         # Validator node sayısı (PBFT için)
         'network_delay_ms': 100,      # Node'lar arası iletişim gecikmesi (ms)
     },
