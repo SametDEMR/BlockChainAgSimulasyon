@@ -50,6 +50,8 @@ class Node:
         self.is_sybil = False
         self.is_malicious = False  # Majority attack için
         self.partition_group = None  # "A", "B" veya None (Network partition için)
+        self.is_selfish_miner = False  # Selfish mining saldırısı için
+        self.private_chain = None  # Selfish miner'ın gizli zinciri
         
         # Metrikler
         self.cpu_usage = 20  # %
@@ -417,6 +419,55 @@ class Node:
         time.sleep(1)
         if not self.is_byzantine and not self.is_sybil:
             self.status = "healthy"
+    
+    def reveal_private_chain(self):
+        """
+        Selfish miner'in private chain'ini yayınla
+        Private chain public chain'den uzunsa onu yayınlar
+        
+        Returns:
+            bool: Reveal başarılı mı?
+        """
+        if not self.is_selfish_miner or not self.private_chain:
+            return False
+        
+        # Private chain public'ten uzunsa yayınla
+        private_length = len(self.private_chain.chain)
+        public_length = len(self.blockchain.chain)
+        
+        if private_length > public_length:
+            # Private chain'i public yap
+            old_public = self.blockchain
+            self.blockchain = self.private_chain
+            self.private_chain = old_public
+            
+            print(f"🔴 Node {self.id} REVEALED private chain ({private_length} blocks > {public_length} public blocks)")
+            return True
+        
+        return False
+    
+    def start_selfish_mining(self):
+        """
+        Selfish mining'i başlat
+        Private chain oluşturur
+        """
+        if not self.is_selfish_miner:
+            self.is_selfish_miner = True
+            # Private chain oluştur (public chain'in kopyası)
+            self.private_chain = Blockchain()
+            self.private_chain.chain = [block for block in self.blockchain.chain]
+            self.private_chain.pending_transactions = []
+            print(f"🟠 Node {self.id} started SELFISH MINING")
+    
+    def stop_selfish_mining(self):
+        """
+        Selfish mining'i durdur
+        Private chain'i sıfırla
+        """
+        if self.is_selfish_miner:
+            self.is_selfish_miner = False
+            self.private_chain = None
+            print(f"🟢 Node {self.id} stopped SELFISH MINING")
     
     def __repr__(self):
         return f"Node({self.id} | {self.role} | {self.status})"

@@ -19,6 +19,7 @@ from backend.attacks.byzantine import ByzantineAttack
 from backend.attacks.sybil import SybilAttack
 from backend.attacks.majority_attack import MajorityAttack
 from backend.attacks.network_partition import NetworkPartition
+from backend.attacks.selfish_mining import SelfishMining
 from config import get_api_config
 
 app = FastAPI(
@@ -41,6 +42,7 @@ byzantine_attack = ByzantineAttack(simulator)
 sybil_attack = SybilAttack(simulator)
 majority_attack = MajorityAttack(simulator, attack_engine)
 network_partition = NetworkPartition(simulator, attack_engine)
+selfish_mining = SelfishMining(simulator)
 background_tasks_list = []
 
 
@@ -407,6 +409,37 @@ async def stop_partition_attack():
         "message": "Network partition attack stopped",
         "attack_status": network_partition.get_status()
     }
+
+
+@app.post("/attack/selfish/trigger")
+async def trigger_selfish_mining_attack(target_node_id: str):
+    """Selfish Mining saldırısını tetikle"""
+    result = selfish_mining.trigger(target_node_id)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    return {
+        "status": "success",
+        "message": result["message"],
+        "target_node": result["target_node"],
+        "duration": result["duration"],
+        "reveal_threshold": result["reveal_threshold"],
+        "attack_status": selfish_mining.get_status()
+    }
+
+
+@app.get("/attack/selfish/status")
+async def get_selfish_mining_status():
+    """Selfish Mining saldırı durumunu döndür"""
+    return selfish_mining.get_status()
+
+
+@app.post("/attack/selfish/stop")
+async def stop_selfish_mining_attack():
+    """Selfish Mining saldırısını durdur"""
+    result = selfish_mining.stop()
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    return result
 
 
 @app.get("/metrics")
