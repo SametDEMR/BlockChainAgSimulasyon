@@ -388,6 +388,16 @@ class Node:
             pbft_stats = self.pbft.get_stats()
             status_dict['pbft'] = pbft_stats
         
+        # Private chain bilgileri ekle (selfish miner ise)
+        if self.is_selfish_miner and self.private_chain:
+            status_dict['private_chain'] = {
+                'exists': True,
+                'length': len(self.private_chain.chain),
+                'chain': self.private_chain.to_dict()
+            }
+        else:
+            status_dict['private_chain'] = {'exists': False}
+        
         return status_dict
     
     def set_byzantine(self, is_byzantine=True):

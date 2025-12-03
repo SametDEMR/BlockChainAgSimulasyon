@@ -65,21 +65,29 @@ def display_blockchain_visualizer(api_url: str):
         if selfish_status and selfish_status.get('active', False):
             target_node_id = selfish_status.get('target_node')
             if target_node_id and target_node_id in nodes:
-                target_node = nodes[target_node_id]
-                
-                # Private chain'i göster
-                st.subheader("🟠 Private Chain (Selfish Miner)")
-                st.info(f"Selfish Miner: {target_node_id} | Private: {selfish_status.get('private_chain_length', 0)} blocks | Public: {selfish_status.get('public_chain_length', 0)} blocks")
-                
-                # Private chain bloklarini fetch et (node detail'den)
+                # Private chain bloklarini fetch et
                 try:
                     node_response = requests.get(f"{api_url}/nodes/{target_node_id}", timeout=5)
                     if node_response.status_code == 200:
                         node_detail = node_response.json()
-                        # Private chain varsa göster (simdi sadece indicator)
-                        st.success(f"🔒 Private Chain: {selfish_status.get('private_chain_length', 0)} blocks (hidden from network)")
-                except:
-                    pass
+                        private_chain_data = node_detail.get('private_chain', {})
+                        
+                        if private_chain_data.get('exists', False):
+                            private_chain = private_chain_data.get('chain', {}).get('chain', [])
+                            
+                            # Private chain'i göster
+                            st.subheader("🟠 Private Chain (Selfish Miner - Hidden)")
+                            st.info(f"Selfish Miner: {target_node_id} | Private: {len(private_chain)} blocks | Advantage: +{selfish_status.get('advantage', 0)}")
+                            
+                            if private_chain:
+                                for block in reversed(private_chain):
+                                    display_block_card(block, nodes, is_private=True)
+                            else:
+                                st.info("Private chain starting...")
+                            
+                            st.divider()
+                except Exception as e:
+                    st.warning(f"Could not fetch private chain: {e}")
         
         # Public chain'i göster
         st.subheader("🟢 Public Chain")
@@ -97,13 +105,14 @@ def display_blockchain_visualizer(api_url: str):
         st.error(f"Failed to fetch blockchain: {e}")
 
 
-def display_block_card(block: dict, nodes: dict = None):
+def display_block_card(block: dict, nodes: dict = None, is_private: bool = False):
     """
     Tek bir bloğu kart olarak göster
     
     Args:
         block: Block dictionary
         nodes: Node'lar dictionary (miner malicious kontrolü için)
+        is_private: Private chain bloğu mu?
     """
     index = block.get("index", 0)
     block_hash = block.get("hash", "")[:16]
@@ -122,7 +131,11 @@ def display_block_card(block: dict, nodes: dict = None):
     is_genesis = index == 0
     
     # Renk şeması
-    if is_genesis:
+    if is_private:
+        border_color = "#FF8C00"  # Turuncu - Private Chain
+        bg_color = "#FFF5E6"
+        status_label = "PRIVATE"
+    elif is_genesis:
         border_color = "#00BFFF"  # Mavi - Genesis
         bg_color = "#E6F7FF"
         status_label = "GENESIS"
