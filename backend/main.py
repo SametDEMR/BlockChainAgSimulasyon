@@ -17,6 +17,7 @@ from backend.attacks.attack_engine import AttackEngine, AttackType
 from backend.attacks.ddos import DDoSAttack
 from backend.attacks.byzantine import ByzantineAttack
 from backend.attacks.sybil import SybilAttack
+from backend.attacks.majority_attack import MajorityAttack
 from config import get_api_config
 
 app = FastAPI(
@@ -37,6 +38,7 @@ simulator = Simulator()
 attack_engine = AttackEngine()
 byzantine_attack = ByzantineAttack(simulator)
 sybil_attack = SybilAttack(simulator)
+majority_attack = MajorityAttack(simulator, attack_engine)
 background_tasks_list = []
 
 
@@ -76,6 +78,27 @@ async def get_blockchain():
         raise HTTPException(status_code=404, detail="No nodes available")
     node = simulator.nodes[0]
     return {"chain_length": len(node.blockchain.chain), "chain": node.blockchain.to_dict()}
+
+
+@app.get("/blockchain/fork-status")
+async def get_fork_status():
+    """Tüm node'ların fork durumunu döndür"""
+    if not simulator.nodes:
+        raise HTTPException(status_code=404, detail="No nodes available")
+    
+    fork_statuses = []
+    for node in simulator.nodes:
+        fork_statuses.append({
+            "node_id": node.id,
+            "role": node.role,
+            "fork_status": node.blockchain.get_fork_status(),
+            "chain_length": len(node.blockchain.chain)
+        })
+    
+    return {
+        "total_nodes": len(simulator.nodes),
+        "fork_statuses": fork_statuses
+    }
 
 
 @app.get("/nodes")
@@ -313,6 +336,38 @@ async def stop_sybil_attack():
         "status": "success",
         "message": "Sybil attack stopped",
         "attack_status": sybil_attack.get_status()
+    }
+
+
+@app.post("/attack/majority/trigger")
+async def trigger_majority_attack():
+    """Majority (%51) saldırısını tetikle"""
+    try:
+        attack_id = await majority_attack.execute()
+        return {
+            "status": "success",
+            "message": "Majority attack triggered",
+            "attack_id": attack_id,
+            "attack_status": majority_attack.get_status()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/attack/majority/status")
+async def get_majority_attack_status():
+    """Majority saldırı durumunu döndür"""
+    return majority_attack.get_status()
+
+
+@app.post("/attack/majority/stop")
+async def stop_majority_attack():
+    """Majority saldırısını durdur"""
+    majority_attack.stop()
+    return {
+        "status": "success",
+        "message": "Majority attack stopped",
+        "attack_status": majority_attack.get_status()
     }
 
 

@@ -40,6 +40,12 @@ class Blockchain:
         self.mining_reward = config['mining_reward']
         self.max_transactions_per_block = config['max_transactions_per_block']
         
+        # Fork handling
+        self.fork_detected = False
+        self.alternative_chains = []  # Fork durumunda alternatif zincirler
+        self.fork_history = []  # Fork geçmişi
+        self.orphaned_blocks = []  # Orphan bloklar
+        
         # Genesis block oluştur
         self._create_genesis_block()
     
@@ -225,6 +231,111 @@ class Blockchain:
         """Zincir uzunluğunu döndür"""
         return len(self.chain)
     
+    def detect_fork(self, incoming_chain):
+        """
+        Fork tespit et - yeni bir zincir geldiğinde karşılaştır
+        
+        Args:
+            incoming_chain (list): Gelen alternatif zincir
+            
+        Returns:
+            bool: Fork tespit edildi mi?
+        """
+        # Zincirlerin uzunluklarını karşılaştır
+        if len(incoming_chain) <= len(self.chain):
+            return False
+        
+        # Genesis block aynı olmalı
+        if incoming_chain[0].hash != self.chain[0].hash:
+            print("Fork rejected: Different genesis block")
+            return False
+        
+        # Farklılaşma noktasını bul
+        fork_point = 0
+        for i in range(min(len(self.chain), len(incoming_chain))):
+            if self.chain[i].hash != incoming_chain[i].hash:
+                fork_point = i
+                break
+        
+        if fork_point > 0:
+            self.fork_detected = True
+            self._record_fork_event(fork_point, incoming_chain)
+            return True
+        
+        return False
+    
+    def resolve_fork(self, incoming_chain):
+        """
+        Fork çözümle - en uzun zincir kuralı
+        
+        Args:
+            incoming_chain (list): Rakip zincir
+            
+        Returns:
+            bool: Zincir değişti mi?
+        """
+        # En uzun zincir kazanır
+        if len(incoming_chain) > len(self.chain):
+            # Mevcut zinciri yedeğe al
+            orphaned = self.chain.copy()
+            self.orphaned_blocks.extend(orphaned)
+            
+            # Yeni zinciri kabul et
+            self.chain = incoming_chain
+            self.fork_detected = False
+            
+            print(f"✅ Fork resolved: Longer chain accepted ({len(incoming_chain)} blocks)")
+            return True
+        
+        print(f"⚠️  Fork resolved: Current chain kept ({len(self.chain)} blocks)")
+        return False
+    
+    def add_alternative_chain(self, chain):
+        """
+        Alternatif zincir ekle (fork tracking için)
+        
+        Args:
+            chain (list): Alternatif zincir
+        """
+        self.alternative_chains.append({
+            'chain': chain,
+            'length': len(chain),
+            'added_at': time.time()
+        })
+    
+    def _record_fork_event(self, fork_point, incoming_chain):
+        """
+        Fork olayını kaydet
+        
+        Args:
+            fork_point (int): Forkun başladığı blok index
+            incoming_chain (list): Gelen zincir
+        """
+        fork_event = {
+            'timestamp': time.time(),
+            'fork_point': fork_point,
+            'current_chain_length': len(self.chain),
+            'incoming_chain_length': len(incoming_chain),
+            'resolved': False
+        }
+        self.fork_history.append(fork_event)
+        print(f"⚠️  Fork detected at block #{fork_point}")
+    
+    def get_fork_status(self):
+        """
+        Fork durumunu döndür
+        
+        Returns:
+            dict: Fork bilgileri
+        """
+        return {
+            'fork_detected': self.fork_detected,
+            'alternative_chains_count': len(self.alternative_chains),
+            'fork_events_count': len(self.fork_history),
+            'orphaned_blocks_count': len(self.orphaned_blocks),
+            'fork_history': self.fork_history[-5:] if self.fork_history else []  # Son 5 olay
+        }
+    
     def to_dict(self):
         """
         Blockchain'i dictionary'ye çevir
@@ -236,7 +347,8 @@ class Blockchain:
             'chain_length': len(self.chain),
             'difficulty': self.difficulty,
             'pending_transactions_count': len(self.pending_transactions),
-            'chain': [block.to_dict() for block in self.chain]
+            'chain': [block.to_dict() for block in self.chain],
+            'fork_status': self.get_fork_status()
         }
     
     def __repr__(self):

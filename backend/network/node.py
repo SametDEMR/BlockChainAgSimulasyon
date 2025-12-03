@@ -48,6 +48,7 @@ class Node:
         self.trust_score = 100
         self.is_byzantine = False
         self.is_sybil = False
+        self.is_malicious = False  # Majority attack için
         
         # Metrikler
         self.cpu_usage = 20  # %
