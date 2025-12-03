@@ -184,8 +184,11 @@ class NetworkPartition:
         )
         
         # Her grubun en uzun zincirini bul
-        group_a_max_length = max([len(n.blockchain.chain) for n in self.group_a], default=0)
-        group_b_max_length = max([len(n.blockchain.chain) for n in self.group_b], default=0)
+        group_a_chains = [(n, len(n.blockchain.chain)) for n in self.group_a]
+        group_b_chains = [(n, len(n.blockchain.chain)) for n in self.group_b]
+        
+        group_a_max_length = max([length for _, length in group_a_chains], default=0)
+        group_b_max_length = max([length for _, length in group_b_chains], default=0)
         
         # En uzun zinciri belirle
         winner_group = "A" if group_a_max_length >= group_b_max_length else "B"
@@ -197,6 +200,35 @@ class NetworkPartition:
             f"Group {winner_group} chain won (length: {winner_length} vs {loser_length})"
         )
         
+        # Kazanıcı grubu belirle
+        winner_nodes = self.group_a if winner_group == "A" else self.group_b
+        loser_nodes = self.group_b if winner_group == "A" else self.group_a
+        
+        # En uzun zinciri bul
+        winner_chain_node = None
+        for node, length in (group_a_chains if winner_group == "A" else group_b_chains):
+            if length == winner_length:
+                winner_chain_node = node
+                break
+        
+        # Kaybeden grubun zincirlerini orphan yap
+        orphaned_blocks = 0
+        if winner_chain_node:
+            for loser_node in loser_nodes:
+                # Fork tespit et
+                loser_chain_length = len(loser_node.blockchain.chain)
+                if loser_chain_length > 0:
+                    loser_node.blockchain.detect_fork(winner_chain_node.blockchain.chain)
+                    # En uzun zinciri kabul et
+                    loser_node.blockchain.resolve_fork(winner_chain_node.blockchain.chain)
+                    orphaned_blocks += loser_chain_length
+        
+        if orphaned_blocks > 0:
+            self.attack_engine.add_attack_effect(
+                self.attack_id,
+                f"{orphaned_blocks} blocks from losing partition marked as orphaned"
+            )
+        
         # MessageBroker'da partition'ı kaldır
         if hasattr(self.simulator, 'message_broker'):
             self.simulator.message_broker.clear_partition()
@@ -206,12 +238,11 @@ class NetworkPartition:
         
         # Simülasyon: Zincir senkronizasyonu
         await asyncio.sleep(0.5)
-        orphaned_blocks = abs(group_a_max_length - group_b_max_length)
-        if orphaned_blocks > 0:
-            self.attack_engine.add_attack_effect(
-                self.attack_id,
-                f"{orphaned_blocks} blocks orphaned from losing partition"
-            )
+        
+        self.attack_engine.add_attack_effect(
+            self.attack_id,
+            f"All nodes synchronized to winning chain (length: {winner_length})"
+        )
         
         self.partition_active = False
     
