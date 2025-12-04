@@ -123,12 +123,20 @@ class TestPBFTHandler:
         assert consensus_count >= 3  # En az 3 node konsensüs sağlamalı
     
     def test_view_change(self, handlers):
-        """View change testi"""
-        handler = handlers['node_1']
+        """View change testi - distributed voting"""
+        new_view = 1
+        voters = ['node_1', 'node_2', 'node_3']  # 2f+1 = 3 oy gerekli
         
-        view_changed = handler.trigger_view_change("timeout")
-        assert view_changed is True
-        assert handler.view == 1
+        # Her node oy verir ve diğerlerine bildirir (distributed)
+        for voter_id in voters:
+            handlers[voter_id].trigger_view_change("timeout")
+            
+            # Diğer handler'lara da bu oyu bildir
+            for handler in handlers.values():
+                handler.vote_for_view_change(new_view, voter_id)
+        
+        # Konsensüs sağlanmalı - tüm handler'lar yeni view'a geçmeli
+        assert all(h.view == new_view for h in handlers.values())
     
     def test_stats(self, handlers):
         """PBFT istatistikleri"""

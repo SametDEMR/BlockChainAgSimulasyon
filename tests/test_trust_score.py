@@ -4,6 +4,7 @@ Test Trust Score System - Milestone 4.2
 import asyncio
 import sys
 import os
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -11,6 +12,7 @@ from backend.simulator import Simulator
 from backend.attacks.byzantine import ByzantineAttack
 
 
+@pytest.mark.asyncio
 async def test_trust_score():
     print("=" * 80)
     print("TRUST SCORE SYSTEM TEST - MILESTONE 4.2")

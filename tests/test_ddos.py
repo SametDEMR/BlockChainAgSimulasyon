@@ -6,11 +6,13 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import asyncio
+import pytest
 from backend.attacks.attack_engine import AttackEngine
 from backend.attacks.ddos import DDoSAttack
 from backend.network.node import Node
 
 
+@pytest.mark.asyncio
 async def test_ddos_attack():
     """DDoS saldırısını test eder"""
     

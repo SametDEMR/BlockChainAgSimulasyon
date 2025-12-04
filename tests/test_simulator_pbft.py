@@ -5,12 +5,14 @@ Simulator + PBFT Entegrasyon Testi
 import asyncio
 import sys
 import os
+import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from backend.simulator import Simulator
 
 
+@pytest.mark.asyncio
 async def test_simulator_pbft():
     """Simulator + PBFT tam entegrasyon testi"""
     
@@ -98,6 +100,7 @@ async def test_simulator_pbft():
     print("=" * 60)
 
 
+@pytest.mark.asyncio
 async def test_auto_production():
     """Otomatik blok üretimi testi"""
     

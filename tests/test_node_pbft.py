@@ -5,6 +5,7 @@ Node + PBFT Entegrasyon Testi
 import asyncio
 import sys
 import os
+import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -12,6 +13,7 @@ from backend.network.node import Node
 from backend.network.message_broker import MessageBroker
 
 
+@pytest.mark.asyncio
 async def test_node_pbft_integration():
     """Node ve PBFT entegrasyonu testi"""
     
@@ -109,6 +111,7 @@ async def test_node_pbft_integration():
     print("=" * 60)
 
 
+@pytest.mark.asyncio
 async def test_regular_vs_validator():
     """Regular vs Validator node testi"""
     

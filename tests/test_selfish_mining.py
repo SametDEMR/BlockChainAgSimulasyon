@@ -13,6 +13,7 @@ Bu test selfish mining saldırısının tüm özelliklerini test eder:
 import sys
 import os
 import asyncio
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -20,6 +21,7 @@ from backend.simulator import Simulator
 from backend.attacks.selfish_mining import SelfishMining
 
 
+@pytest.mark.asyncio
 async def test_selfish_mining():
     """Selfish Mining attack tam testi"""
     

@@ -163,6 +163,13 @@ class DDoSAttack:
     
     def stop(self):
         """Saldırıyı manuel olarak durdurur"""
+        # İlk önce node'u düzelt
+        self.target_node.response_time = self.original_response_time
+        self.target_node.status = "healthy"
+        if hasattr(self.target_node, 'cpu_usage'):
+            self.target_node.cpu_usage = 20
+        
+        # Sonra task'i cancel et
         if self.recovery_task and not self.recovery_task.done():
             self.recovery_task.cancel()
         if self.attack_id:

@@ -104,20 +104,19 @@ def test_partition_api():
         print("\n" + "=" * 60)
         print("✅ ALL TESTS PASSED")
         print("=" * 60)
-        return True
         
     except AssertionError as e:
         print(f"\n❌ ASSERTION FAILED: {e}")
-        return False
+        raise
     except requests.exceptions.ConnectionError:
         print(f"\n❌ ERROR: Cannot connect to API at {API_BASE}")
         print("   Make sure backend is running: python backend/main.py")
-        return False
+        raise
     except Exception as e:
         print(f"\n❌ ERROR: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        raise
 
 
 def main():
@@ -125,9 +124,8 @@ def main():
     print("\n🚀 Network Partition UI Integration Test")
     print("   Prerequisite: Backend must be running!")
     
-    success = test_partition_api()
-    
-    if success:
+    try:
+        test_partition_api()
         print("\n✅ Test completed successfully!")
         print("\nUI Test Steps:")
         print("1. Start frontend: streamlit run frontend/main.py")
@@ -138,7 +136,7 @@ def main():
         print("6. Check Network Map for partition visualization")
         print("7. Click 'Stop Partition' button")
         sys.exit(0)
-    else:
+    except Exception:
         print("\n❌ Test failed!")
         sys.exit(1)
 

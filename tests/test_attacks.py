@@ -81,9 +81,15 @@ class TestDDoSAttack:
         await ddos.execute()
         
         ddos.stop()
-        await asyncio.sleep(0.5)
         
-        assert node.status in ["healthy", "recovering"]
+        # Cancel edilen task'in tamamlanmasını bekle
+        if ddos.recovery_task:
+            try:
+                await ddos.recovery_task
+            except asyncio.CancelledError:
+                pass
+        
+        assert node.status == "healthy"
 
 
 @pytest.mark.asyncio

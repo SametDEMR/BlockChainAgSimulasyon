@@ -57,12 +57,17 @@ class TestSimulatorAsync:
     async def test_auto_block_production(self, simulator):
         """Otomatik blok üretimi testi"""
         simulator.start()
+        initial_chains = {n.id: len(n.blockchain.chain) for n in simulator.nodes}
+        
+        # Config'den block_time al ve dinamik bekleme
+        block_time = simulator.blockchain_config['block_time']
+        wait_time = block_time * 2 + 1  # 2 blok + buffer (5*2+1=11 saniye)
         
         # Auto production task başlat
         task = asyncio.create_task(simulator.auto_block_production())
         
-        # 3 saniye bekle
-        await asyncio.sleep(3)
+        # Dinamik bekleme
+        await asyncio.sleep(wait_time)
         
         # Stop
         simulator.stop()
@@ -73,9 +78,9 @@ class TestSimulatorAsync:
         except asyncio.CancelledError:
             pass
         
-        # En az bir blok üretilmiş olmalı
-        max_chain = max([len(n.blockchain.chain) for n in simulator.nodes])
-        assert max_chain > 1  # Genesis + mined blocks
+        # En az bir node'da blok artışı olmalı
+        final_chains = {n.id: len(n.blockchain.chain) for n in simulator.nodes}
+        assert any(final_chains[nid] > initial_chains[nid] for nid in initial_chains)
     
     async def test_pbft_message_processing(self, simulator):
         """PBFT mesaj işleme testi"""
