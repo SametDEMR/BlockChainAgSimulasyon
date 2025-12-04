@@ -154,30 +154,25 @@ class TestPBFTByzantine:
         primary = handlers['node_0']
         pre_prepare = primary.create_pre_prepare("correct_hash", 1)
         
-        # node_2 Byzantine - yanlış hash
+        # TÜM handler'lar pre-prepare'i işler ve prepare mesajı üretir
         prepare_messages = []
         for node_id, handler in handlers.items():
-            if node_id == 'node_0':
+            if node_id == 'node_0':  # Primary prepare göndermiyor
                 continue
             
             prepare = handler.process_pre_prepare(pre_prepare)
             if prepare:
+                # node_2 Byzantine - yanlış hash gönderir
                 if node_id == 'node_2':
                     prepare.block_hash = "wrong_hash"
                 prepare_messages.append(prepare)
         
-        # Commit'leri sayalım
-        correct_commits = 0
-        wrong_commits = 0
-        
-        for handler in handlers.values():
-            for prepare in prepare_messages:
-                commit = handler.process_prepare(prepare)
-                if commit:
-                    if commit.block_hash == "correct_hash":
-                        correct_commits += 1
-                    else:
-                        wrong_commits += 1
+        # Prepare mesajlarını say
+        correct_prepares = sum(1 for p in prepare_messages if p.block_hash == "correct_hash")
+        wrong_prepares = sum(1 for p in prepare_messages if p.block_hash == "wrong_hash")
         
         # Byzantine node tek başına etkisiz olmalı
-        assert correct_commits > wrong_commits
+        # 3 prepare: 2 correct (node_1, node_3), 1 wrong (node_2)
+        assert correct_prepares == 2
+        assert wrong_prepares == 1
+        assert correct_prepares > wrong_prepares

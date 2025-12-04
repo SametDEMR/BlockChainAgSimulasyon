@@ -116,8 +116,9 @@ class TestMessageBrokerPartition:
         
         status = message_broker.get_partition_status()
         assert status['active'] is True
-        assert len(status['group_a']) == 2
-        assert len(status['group_b']) == 2
+        # Backend'de 'group_a_size' ve 'group_b_size' key'leri kullanılıyor
+        assert status['group_a_size'] == 2
+        assert status['group_b_size'] == 2
     
     def test_clear_partition(self, message_broker):
         """Partition clear testi"""

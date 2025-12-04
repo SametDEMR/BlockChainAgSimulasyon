@@ -9,7 +9,7 @@ import asyncio
 from backend.attacks.attack_engine import AttackEngine
 from backend.attacks.ddos import DDoSAttack
 from backend.network.node import Node
-from config import CONFIG
+
 
 async def test_ddos_attack():
     """DDoS saldırısını test eder"""

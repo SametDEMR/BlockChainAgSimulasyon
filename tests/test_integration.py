@@ -21,12 +21,18 @@ class TestNodePBFTIntegration:
         for i in range(4):
             node = Node(role="validator", total_validators=4, message_broker=broker)
             node.id = f"node_{i}"
+            node.pbft.node_id = f"node_{i}"  # PBFT'ye de bildir
             validators.append(node)
             broker.register_node(node.id)
         
-        # Primary kontrolü
-        primary = validators[0]
-        assert primary.pbft.is_primary() is True
+        # Primary ID'yi hesapla
+        primary_id = validators[0].pbft.get_primary_id()
+        
+        # O ID'ye sahip node'u bul
+        primary_node = next(v for v in validators if v.id == primary_id)
+        
+        # Primary node'un is_primary() True dönmeli
+        assert primary_node.pbft.is_primary() is True
     
     async def test_pbft_propose_block(self):
         """PBFT blok önerisi testi"""
@@ -36,10 +42,19 @@ class TestNodePBFTIntegration:
         for i in range(4):
             node = Node(role="validator", total_validators=4, message_broker=broker)
             node.id = f"node_{i}"
+            node.pbft.node_id = f"node_{i}"
             validators.append(node)
             broker.register_node(node.id)
         
-        primary = validators[0]
+        # Primary'yi bul
+        primary_id = validators[0].pbft.get_primary_id()
+        primary = next(v for v in validators if v.id == primary_id)
+        
+        # Transaction ekle (pending olmalı)
+        receiver = validators[1].wallet.address
+        tx = primary.create_transaction(receiver, 10)
+        if tx:
+            primary.blockchain.add_transaction(tx)
         
         # Blok öner
         block = await primary.propose_block()
@@ -120,14 +135,31 @@ class TestBlockchainFork:
     
     def test_fork_detection(self, blockchain):
         """Fork detection testi"""
-        # Ana zincir
+        # Ana zincir: Genesis + 3 blok
         for _ in range(3):
             blockchain.mine_pending_transactions("Miner1")
         
-        # Alternatif zincir oluştur
+        # Alternatif zincir oluştur - FARKLI bloklar
+        from backend.core.block import Block
+        import time
+        
+        # Ana zincirin başından başla (genesis + 1 blok)
         alt_chain = blockchain.chain[:2].copy()
         
-        # Fork detect
+        # FARKLI bloklar ekle (fork oluştur)
+        for i in range(3):
+            last_block = alt_chain[-1]
+            new_block = Block(
+                index=len(alt_chain),
+                timestamp=time.time() + 100,  # Farklı timestamp
+                transactions=[],
+                previous_hash=last_block.hash,
+                miner=f"AttackerMiner{i}"  # Farklı miner
+            )
+            new_block.mine_block(blockchain.difficulty)
+            alt_chain.append(new_block)
+        
+        # Şimdi fork var: blok 2'den sonra farklılaşıyor
         fork_detected = blockchain.detect_fork(alt_chain)
         assert fork_detected is True
     

@@ -73,6 +73,9 @@ class ByzantineAttack:
         target_node.is_byzantine = True
         target_node.status = "under_attack"
         
+        # Trust score'ı hemen düşür (saldırı başlatıldığında)
+        target_node.trust_score = max(0, target_node.trust_score - 20)
+        
         # Byzantine davranış: PBFT pre-prepare mesajında hatalı hash gönder
         # Node'un propose_block metodunu override ederiz
         self.original_behavior = target_node.propose_block

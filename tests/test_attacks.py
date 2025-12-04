@@ -100,6 +100,10 @@ class TestByzantineAttack:
         
         assert result["success"] is True
         assert target.is_byzantine is True
+        
+        # Trust score düşüşü için bekle (async güncelleniyor)
+        await asyncio.sleep(1.0)
+        
         assert target.trust_score < initial_trust
 
 
@@ -138,13 +142,15 @@ class TestSybilAttack:
 class TestMajorityAttack:
     """Majority Attack testleri"""
     
-    def test_majority_execute(self, simulator):
+    @pytest.mark.asyncio
+    async def test_majority_execute(self, simulator, attack_engine):
         """Majority saldırı yürütme"""
-        majority = MajorityAttack(simulator)
+        majority = MajorityAttack(simulator, attack_engine)
         
-        result = majority.execute()
+        attack_id = await majority.execute()
         
-        assert result["success"] is True
+        assert attack_id is not None
+        assert isinstance(attack_id, str)
         
         # Validator'ların %51'i malicious olmalı
         malicious = [v for v in simulator.validator_nodes if v.is_malicious]
@@ -154,13 +160,15 @@ class TestMajorityAttack:
 class TestNetworkPartition:
     """Network Partition testleri"""
     
-    def test_partition_execute(self, simulator):
+    @pytest.mark.asyncio
+    async def test_partition_execute(self, simulator, attack_engine):
         """Partition saldırı yürütme"""
-        partition = NetworkPartition(simulator)
+        partition = NetworkPartition(simulator, attack_engine)
         
-        result = partition.execute()
+        attack_id = await partition.execute()
         
-        assert result["success"] is True
+        assert attack_id is not None
+        assert isinstance(attack_id, str)
         
         # Partition status kontrolü
         broker_status = simulator.message_broker.get_partition_status()

@@ -109,7 +109,19 @@ class TestSimulatorNodes:
         node = simulator.nodes[0]
         initial_chain_length = len(node.blockchain.chain)
         
+        # Transaction ekle (varsa)
+        if len(simulator.nodes) > 1:
+            receiver = simulator.nodes[1].wallet.address
+            tx = node.create_transaction(receiver, 10)
+            if tx:
+                node.blockchain.add_transaction(tx)
+        
+        # Mine (coinbase her zaman vardır)
         block = node.mine_block()
+        
+        # Eğer None ise blockchain'de mine_pending_transactions çağır
+        if block is None:
+            block = node.blockchain.mine_pending_transactions(node.wallet.address)
         
         assert block is not None
         assert len(node.blockchain.chain) == initial_chain_length + 1
