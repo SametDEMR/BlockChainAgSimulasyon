@@ -1,87 +1,119 @@
-"""Quick verification script for MetricsWidget."""
+"""Verification script for MetricsWidget Milestone 2.2."""
 import sys
 from pathlib import Path
 
-# Add project root to path (parent of tests/)
+# Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 try:
     from PySide6.QtWidgets import QApplication
     from ui.widgets.metrics_widget import MetricsWidget
+    import pyqtgraph as pg
     
-    print("✓ Imports successful")
+    print("="*60)
+    print("MILESTONE 2.2 VERIFICATION: PyQtGraph Integration")
+    print("="*60)
     
     # Create QApplication
     app = QApplication(sys.argv) if QApplication.instance() is None else QApplication.instance()
     
-    # Create widget without data manager
+    # Create widget
     widget = MetricsWidget(data_manager=None)
-    print("✓ MetricsWidget created successfully")
+    print("\n✓ MetricsWidget created")
     
-    # Check sections exist
-    assert widget.graph_section is not None, "graph_section missing"
-    print("✓ graph_section exists")
+    # Check PyQtGraph components
+    assert hasattr(widget, 'plot_widget'), "plot_widget missing"
+    print("✓ plot_widget exists")
     
-    assert widget.cards_section is not None, "cards_section missing"
-    print("✓ cards_section exists")
+    assert hasattr(widget, 'response_time_data'), "response_time_data missing"
+    assert isinstance(widget.response_time_data, dict), "response_time_data not dict"
+    print("✓ response_time_data initialized")
     
-    assert widget.health_section is not None, "health_section missing"
-    print("✓ health_section exists")
+    assert hasattr(widget, 'graph_curves'), "graph_curves missing"
+    assert isinstance(widget.graph_curves, dict), "graph_curves not dict"
+    print("✓ graph_curves initialized")
     
-    assert widget.metrics_section is not None, "metrics_section missing"
-    print("✓ metrics_section exists")
+    assert widget.max_points == 50, f"max_points should be 50, got {widget.max_points}"
+    print("✓ max_points = 50")
     
-    # Check health bars
-    assert widget.overall_health is not None, "overall_health missing"
-    assert widget.validators_health is not None, "validators_health missing"
-    assert widget.regular_health is not None, "regular_health missing"
-    print("✓ Health bars exist")
+    assert len(widget.colors) == 10, f"colors should have 10 items, got {len(widget.colors)}"
+    print("✓ 10 colors defined")
     
-    # Check metrics labels
-    assert widget.blocks_per_min is not None, "blocks_per_min missing"
-    assert widget.tx_per_sec is not None, "tx_per_sec missing"
-    assert widget.avg_block_time is not None, "avg_block_time missing"
-    print("✓ Metrics labels exist")
+    # Test single node update
+    print("\n--- Testing single node update ---")
+    nodes = [{'id': 'node_0', 'response_time': 50}]
+    widget.update_response_time_graph(nodes)
     
-    # Test update_health
+    assert 'node_0' in widget.response_time_data, "node_0 not in data"
+    print("✓ node_0 data created")
+    
+    assert len(widget.response_time_data['node_0']) == 1, "Should have 1 data point"
+    print("✓ Data point added")
+    
+    assert 'node_0' in widget.graph_curves, "node_0 curve not created"
+    print("✓ Curve created")
+    
+    # Test multiple updates
+    print("\n--- Testing multiple updates ---")
+    for i in range(5):
+        nodes = [{'id': 'node_0', 'response_time': 50 + i * 10}]
+        widget.update_response_time_graph(nodes)
+    
+    assert len(widget.response_time_data['node_0']) == 6, f"Should have 6 points, got {len(widget.response_time_data['node_0'])}"
+    print(f"✓ Accumulated 6 data points: {list(widget.response_time_data['node_0'])}")
+    
+    # Test multiple nodes
+    print("\n--- Testing multiple nodes ---")
+    widget.clear_display()  # Reset
+    
     nodes = [
-        {'id': 'node_0', 'role': 'validator', 'status': 'healthy'},
-        {'id': 'node_1', 'role': 'validator', 'status': 'healthy'},
-        {'id': 'node_2', 'role': 'validator', 'status': 'under_attack'},
-        {'id': 'node_3', 'role': 'validator', 'status': 'healthy'},
-        {'id': 'node_4', 'role': 'regular', 'status': 'healthy'},
-        {'id': 'node_5', 'role': 'regular', 'status': 'healthy'},
+        {'id': 'node_0', 'response_time': 50},
+        {'id': 'node_1', 'response_time': 45},
+        {'id': 'node_2', 'response_time': 70},
     ]
+    widget.update_response_time_graph(nodes)
     
-    widget.update_health(nodes)
-    assert widget.overall_health.value() == 83, f"Expected 83, got {widget.overall_health.value()}"
-    assert widget.validators_health.value() == 75, f"Expected 75, got {widget.validators_health.value()}"
-    assert widget.regular_health.value() == 100, f"Expected 100, got {widget.regular_health.value()}"
-    print("✓ update_health works correctly")
+    assert len(widget.response_time_data) == 3, f"Should have 3 nodes, got {len(widget.response_time_data)}"
+    assert len(widget.graph_curves) == 3, f"Should have 3 curves, got {len(widget.graph_curves)}"
+    print("✓ 3 nodes tracked")
+    print(f"  Node IDs: {list(widget.response_time_data.keys())}")
     
-    # Test update_metrics
-    metrics = {
-        'blocks_per_minute': 12,
-        'transactions_per_second': 5.2,
-        'average_block_time': 5.1
-    }
-    
-    widget.update_metrics(metrics)
-    assert widget.blocks_per_min.text() == "12"
-    assert widget.tx_per_sec.text() == "5.2"
-    assert widget.avg_block_time.text() == "5.1s"
-    print("✓ update_metrics works correctly")
-    
-    # Test clear_display
+    # Test max points limit
+    print("\n--- Testing max points limit (50) ---")
     widget.clear_display()
-    assert widget.overall_health.value() == 0
-    assert widget.blocks_per_min.text() == "0"
-    print("✓ clear_display works correctly")
+    nodes = [{'id': 'node_test', 'response_time': 100}]
     
-    print("\n" + "="*50)
-    print("✓ ALL TESTS PASSED FOR MILESTONE 2.1")
-    print("="*50)
+    for i in range(60):
+        nodes[0]['response_time'] = 100 + i
+        widget.update_response_time_graph(nodes)
+    
+    assert len(widget.response_time_data['node_test']) == 50, f"Should cap at 50, got {len(widget.response_time_data['node_test'])}"
+    
+    # Check oldest points dropped
+    data = list(widget.response_time_data['node_test'])
+    assert data[0] == 110, f"First point should be 110, got {data[0]}"  # 100 + 10 (first 10 dropped)
+    assert data[-1] == 159, f"Last point should be 159, got {data[-1]}"  # 100 + 59
+    print("✓ Max 50 points enforced")
+    print(f"  Range: {data[0]} to {data[-1]}")
+    
+    # Test clear
+    print("\n--- Testing clear ---")
+    widget.clear_display()
+    assert len(widget.response_time_data) == 0, "Data not cleared"
+    assert len(widget.graph_curves) == 0, "Curves not cleared"
+    print("✓ Clear works")
+    
+    print("\n" + "="*60)
+    print("✅ ALL TESTS PASSED FOR MILESTONE 2.2")
+    print("="*60)
+    print("\nFeatures:")
+    print("  • PyQtGraph PlotWidget integrated")
+    print("  • Real-time response time tracking")
+    print("  • Multi-node support (10 colors)")
+    print("  • Auto-scroll (last 50 points)")
+    print("  • Legend and grid")
+    print("  • Dark theme styling")
     
 except Exception as e:
     print(f"\n✗ ERROR: {e}")

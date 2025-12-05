@@ -4,6 +4,9 @@ from PySide6.QtWidgets import (
     QLabel, QProgressBar, QScrollArea, QFrame, QGridLayout
 )
 from PySide6.QtCore import Qt, Slot
+from PySide6.QtGui import QColor
+import pyqtgraph as pg
+from collections import deque
 
 
 class MetricsWidget(QWidget):
@@ -24,6 +27,16 @@ class MetricsWidget(QWidget):
         """
         super().__init__()
         self.data_manager = data_manager
+        
+        # Graph data structures
+        self.max_points = 50  # Keep last 50 data points
+        self.response_time_data = {}  # {node_id: deque([times])}
+        self.graph_curves = {}  # {node_id: PlotDataItem}
+        self.colors = [
+            '#2196F3', '#4CAF50', '#FF9800', '#F44336',
+            '#9C27B0', '#00BCD4', '#FFEB3B', '#795548',
+            '#E91E63', '#009688'
+        ]
         
         self._setup_ui()
         if self.data_manager:
@@ -66,24 +79,28 @@ class MetricsWidget(QWidget):
         main_layout.addWidget(scroll)
     
     def _create_graph_section(self):
-        """Create real-time graph section (placeholder for 2.2)."""
+        """Create real-time graph section with PyQtGraph."""
         group = QGroupBox("Response Time (Real-time)")
         layout = QVBoxLayout(group)
         
-        # Placeholder
-        placeholder = QLabel("📊 PyQtGraph will be added in step 2.2")
-        placeholder.setAlignment(Qt.AlignCenter)
-        placeholder.setMinimumHeight(200)
-        placeholder.setStyleSheet("""
-            QLabel {
-                background-color: #2D2D2D;
-                border: 2px dashed #3D3D3D;
-                border-radius: 8px;
-                color: #888;
-                font-size: 14px;
-            }
-        """)
-        layout.addWidget(placeholder)
+        # Create PyQtGraph PlotWidget
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.setBackground('#2D2D2D')
+        self.plot_widget.setMinimumHeight(250)
+        
+        # Configure plot
+        self.plot_widget.setLabel('left', 'Response Time', units='ms')
+        self.plot_widget.setLabel('bottom', 'Time', units='updates')
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
+        self.plot_widget.addLegend()
+        
+        # Set axis colors
+        self.plot_widget.getAxis('left').setPen(pg.mkPen(color='#E0E0E0'))
+        self.plot_widget.getAxis('bottom').setPen(pg.mkPen(color='#E0E0E0'))
+        self.plot_widget.getAxis('left').setTextPen(pg.mkPen(color='#E0E0E0'))
+        self.plot_widget.getAxis('bottom').setTextPen(pg.mkPen(color='#E0E0E0'))
+        
+        layout.addWidget(self.plot_widget)
         
         return group
     
@@ -214,6 +231,7 @@ class MetricsWidget(QWidget):
         """Setup signal connections with data manager."""
         if self.data_manager:
             self.data_manager.nodes_updated.connect(self.update_health)
+            self.data_manager.nodes_updated.connect(self.update_response_time_graph)
             self.data_manager.metrics_updated.connect(self.update_metrics)
     
     @Slot(list)
@@ -266,6 +284,44 @@ class MetricsWidget(QWidget):
         avg_block_time = metrics.get('average_block_time', 0.0)
         self.avg_block_time.setText(f"{avg_block_time:.1f}s")
     
+    @Slot(list)
+    def update_response_time_graph(self, nodes):
+        """Update real-time response time graph.
+        
+        Args:
+            nodes: List of node dictionaries with response_time
+        """
+        if not nodes:
+            return
+        
+        for node in nodes:
+            node_id = node.get('id')
+            response_time = node.get('response_time', 0)
+            
+            # Initialize data structure for new node
+            if node_id not in self.response_time_data:
+                self.response_time_data[node_id] = deque(maxlen=self.max_points)
+                
+                # Create new curve with color
+                color_idx = len(self.graph_curves) % len(self.colors)
+                color = self.colors[color_idx]
+                pen = pg.mkPen(color=color, width=2)
+                
+                curve = self.plot_widget.plot(
+                    [], [], 
+                    pen=pen, 
+                    name=node_id
+                )
+                self.graph_curves[node_id] = curve
+            
+            # Add new data point
+            self.response_time_data[node_id].append(response_time)
+            
+            # Update curve
+            x_data = list(range(len(self.response_time_data[node_id])))
+            y_data = list(self.response_time_data[node_id])
+            self.graph_curves[node_id].setData(x_data, y_data)
+    
     def clear_display(self):
         """Clear all metrics display."""
         self.overall_health.setValue(0)
@@ -274,3 +330,9 @@ class MetricsWidget(QWidget):
         self.blocks_per_min.setText("0")
         self.tx_per_sec.setText("0.0")
         self.avg_block_time.setText("0.0s")
+        
+        # Clear graph data
+        self.response_time_data.clear()
+        for curve in self.graph_curves.values():
+            curve.clear()
+        self.graph_curves.clear()
