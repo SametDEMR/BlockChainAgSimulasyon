@@ -617,6 +617,6 @@ cd backend
 python main_old_1.py
 
 # Frontend (ayrı terminal)
-cd frontend
+cd frontend-streamlit
 streamlit run main_old_1.py
 ```

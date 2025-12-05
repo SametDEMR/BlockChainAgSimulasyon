@@ -153,7 +153,7 @@ async def main():
         # API kontrolü
         print("\n⚠️  IMPORTANT: Make sure API is running!")
         print("   Terminal 1: python backend/main.py")
-        print("   Terminal 2: streamlit run frontend/main.py")
+        print("   Terminal 2: streamlit run frontend-streamlit/main.py")
         print("\nPress ENTER to start test...")
         input()
         

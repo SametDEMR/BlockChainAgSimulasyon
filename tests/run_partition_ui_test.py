@@ -128,7 +128,7 @@ def main():
         test_partition_api()
         print("\n✅ Test completed successfully!")
         print("\nUI Test Steps:")
-        print("1. Start frontend: streamlit run frontend/main.py")
+        print("1. Start frontend-streamlit: streamlit run frontend-streamlit/main.py")
         print("2. Go to Attack Panel")
         print("3. Select 'Network Partition' attack type")
         print("4. Click 'Trigger Attack'")

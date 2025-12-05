@@ -144,7 +144,7 @@
 python backend/main_old_1.py
 
 # UI başlat
-streamlit run frontend/main_old_1.py
+streamlit run frontend-streamlit/main_old_1.py
 ```
 
 ---

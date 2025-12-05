@@ -19,7 +19,7 @@ print("   Komut: python backend/main.py")
 print("   Bekleyin: API başlayana kadar (~3 saniye)")
 
 print("\n2️⃣  Frontend UI'yi başlat (AYRI TERMINAL)")
-print("   Komut: streamlit run frontend/main.py")
+print("   Komut: streamlit run frontend-streamlit/main.py")
 print("   Otomatik açılacak: http://localhost:8501")
 
 print("\n3️⃣  UI'de Test Senaryosu:")
@@ -71,10 +71,10 @@ try:
     print("ŞIMDI FRONTEND'İ BAŞLATIN (AYRI TERMINAL):")
     print("=" * 80)
     print("\nKomut:")
-    print("   streamlit run frontend/main.py")
+    print("   streamlit run frontend-streamlit/main.py")
     print("\nVeya:")
     print("   cd E:\\PYTHON\\BlockChainAgSimulasyon")
-    print("   streamlit run frontend\\main.py")
+    print("   streamlit run frontend-streamlit\\main.py")
     
     print("\n" + "=" * 80)
     print("Backend çalışıyor. Durdurmak için Ctrl+C'ye basın.")
