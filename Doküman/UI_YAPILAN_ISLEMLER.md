@@ -109,13 +109,163 @@
 
 ---
 
-## Sonraki: Milestone-2
+## Milestone-2: Metrics Dashboard (Right Dock) ✅
+
+### 2.1 Temel MetricsWidget Yapısı ✅
+**Tarih:** Altıncı adım
+**Dosyalar:**
+- `ui/widgets/metrics_widget.py` - Metrics dashboard widget
+- `ui/widgets/__init__.py`
+- `tests/test_metrics_widget.py` - 13 test PASSED
+
+**Özellikler:**
+- QScrollArea içinde metrics bileşenleri
+- Network Health Bars (Overall, Validators, Regular) - QProgressBar
+- System Metrics (Blocks/min, TX/sec, Avg Block Time)
+- Placeholder sections (graph ve cards için)
+- `update_health()`, `update_metrics()`, `clear_display()` metodları
+
+**Veri Yapısı:**
+- Health hesaplama: `(healthy_nodes / total_nodes) * 100`
+- Signal/Slot bağlantıları ile otomatik güncelleme
+
+---
+
+### 2.2 PyQtGraph Real-time Grafik ✅
+**Tarih:** Yedinci adım
+**Dosyalar:**
+- `ui/widgets/metrics_widget.py` (güncellendi)
+- `tests/test_metrics_widget.py` (22 test PASSED)
+
+**Özellikler:**
+- PyQtGraph PlotWidget entegrasyonu
+- Real-time response time grafiği
+- Multi-node desteği (10 farklı renk)
+- Otomatik scroll (son 50 nokta)
+- Dark theme styling
+- Grid ve legend
+
+**Veri Yapısı:**
+```python
+response_time_data = {node_id: deque(maxlen=50)}
+graph_curves = {node_id: PlotDataItem}
+colors = ['#2196F3', '#4CAF50', ...] # 10 renk
+```
+
+**Metodlar:**
+- `update_response_time_graph(nodes)` - Her node için curve günceller
+- Auto-curve creation (yeni node'lar için)
+
+---
+
+### 2.3 Node Status Cards ✅
+**Tarih:** Sekizinci adım
+**Dosyalar:**
+- `ui/widgets/node_status_card.py` - Custom card widget
+- `ui/widgets/metrics_widget.py` (güncellendi)
+- `tests/test_metrics_widget.py` (güncellendi)
+
+**Özellikler:**
+- NodeStatusCard(QFrame) widget
+- Status icons: 🟢 (healthy), 🔴 (under_attack), 🟡 (recovering)
+- Response time gösterimi
+- Trust score/Balance progress bar
+- Border rengi status'e göre değişir
+- Hover effect
+- 2-column grid layout
+
+**Widget İçeriği:**
+```
+┌─────────────────┐
+│ 🟢 node_0      │ ← Status + ID
+│ RT: 50ms       │ ← Response time
+│ Trust: █████░  │ ← Progress bar
+│      95        │ ← Numeric value
+└─────────────────┘
+```
+
+**Metodlar:**
+- `update_status_cards(nodes)` - Kartları oluştur/güncelle
+- Dinamik kart yönetimi (yeni node'lar için otomatik kart)
+
+---
+
+### 2.4 MainWindow Entegrasyonu ✅
+**Tarih:** Dokuzuncu adım
+**Dosyalar:**
+- `ui/main_window.py` (güncellendi)
+- `tests/test_main_window_metrics.py` - 10 test PASSED
+- `tests/verify_main_metrics.py`
+
+**Özellikler:**
+- MetricsWidget → QDockWidget (Right side)
+- Title: "Metrics Dashboard"
+- Closable ve Movable
+- DataManager bağlantısı
+- Reset butonu metrics'i temizler
+
+**Dock Özellikleri:**
+- Position: Qt.RightDockWidgetArea
+- Not floating by default
+- Kullanıcı tarafından taşınabilir/kapatılabilir
+
+---
+
+## Milestone-2 Özet
+
+**Tamamlanan Testler:** 45+ PASSED (22 metrics, 10 main window, 13+ diğer)
+
+**Çalışan Özellikler:**
+- ✅ Metrics Dashboard (Right Dock)
+- ✅ Real-time response time grafiği (PyQtGraph)
+- ✅ Multi-node support (10 curves, 10 colors)
+- ✅ Node status cards (2-column grid)
+- ✅ Network health bars (Overall, Validators, Regular)
+- ✅ System metrics (Blocks/min, TX/sec, Avg Block Time)
+- ✅ Auto-scroll (son 50 data point)
+- ✅ Dynamic card creation/update
+- ✅ Status-based border colors
+- ✅ Dark theme styling
+
+**Dosya Yapısı Güncellemesi:**
+```
+frontend-PySide6/
+├── ui/
+│   ├── widgets/
+│   │   ├── __init__.py
+│   │   ├── metrics_widget.py
+│   │   └── node_status_card.py
+│   ├── main_window.py (güncellendi)
+│   └── pages/
+│       ├── dashboard_page.py
+│       └── nodes_page.py
+├── tests/
+│   ├── test_metrics_widget.py
+│   ├── test_main_window_metrics.py
+│   ├── verify_main_metrics.py
+│   └── ...
+```
+
+**Signal Flow:**
+```
+DataManager.nodes_updated
+  ├─> MetricsWidget.update_health()
+  ├─> MetricsWidget.update_response_time_graph()
+  └─> MetricsWidget.update_status_cards()
+
+DataManager.metrics_updated
+  └─> MetricsWidget.update_metrics()
+```
+
+---
+
+## Sonraki: Milestone-3
 
 **Plan:**
-- Metrics Dashboard (Right Dock)
-- PyQtGraph ile real-time grafikler
-- Node status cards
-- Network health bars
+- Attack Control Panel (Left Dock)
+- DDoS, Byzantine, Sybil attack controls
+- Active attacks tracking
+- Attack trigger buttons
 
 ---
 
