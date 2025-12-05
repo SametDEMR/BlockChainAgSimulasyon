@@ -38,6 +38,9 @@ class MetricsWidget(QWidget):
             '#E91E63', '#009688'
         ]
         
+        # Card widgets
+        self.status_cards = {}  # {node_id: NodeStatusCard}
+        
         self._setup_ui()
         if self.data_manager:
             self._setup_connections()
@@ -105,24 +108,21 @@ class MetricsWidget(QWidget):
         return group
     
     def _create_cards_section(self):
-        """Create node status cards section (placeholder for 2.3)."""
+        """Create node status cards section."""
         group = QGroupBox("Node Status Cards")
         layout = QVBoxLayout(group)
         
-        # Placeholder
-        placeholder = QLabel("🎴 Status cards will be added in step 2.3")
-        placeholder.setAlignment(Qt.AlignCenter)
-        placeholder.setMinimumHeight(150)
-        placeholder.setStyleSheet("""
-            QLabel {
-                background-color: #2D2D2D;
-                border: 2px dashed #3D3D3D;
-                border-radius: 8px;
-                color: #888;
-                font-size: 14px;
-            }
-        """)
-        layout.addWidget(placeholder)
+        # Grid for cards (2 columns)
+        from PySide6.QtWidgets import QGridLayout
+        self.cards_grid = QGridLayout()
+        self.cards_grid.setSpacing(10)
+        self.cards_grid.setColumnStretch(0, 1)
+        self.cards_grid.setColumnStretch(1, 1)
+        
+        layout.addLayout(self.cards_grid)
+        
+        # Dictionary to store card widgets
+        self.status_cards = {}  # {node_id: NodeStatusCard}
         
         return group
     
@@ -232,6 +232,7 @@ class MetricsWidget(QWidget):
         if self.data_manager:
             self.data_manager.nodes_updated.connect(self.update_health)
             self.data_manager.nodes_updated.connect(self.update_response_time_graph)
+            self.data_manager.nodes_updated.connect(self.update_status_cards)
             self.data_manager.metrics_updated.connect(self.update_metrics)
     
     @Slot(list)
@@ -322,6 +323,35 @@ class MetricsWidget(QWidget):
             y_data = list(self.response_time_data[node_id])
             self.graph_curves[node_id].setData(x_data, y_data)
     
+    @Slot(list)
+    def update_status_cards(self, nodes):
+        """Update node status cards.
+        
+        Args:
+            nodes: List of node dictionaries
+        """
+        if not nodes:
+            return
+        
+        from ui.widgets.node_status_card import NodeStatusCard
+        
+        # Update or create cards
+        for i, node in enumerate(nodes):
+            node_id = node.get('id')
+            
+            if node_id not in self.status_cards:
+                # Create new card
+                card = NodeStatusCard(node_id)
+                self.status_cards[node_id] = card
+                
+                # Add to grid (2 columns)
+                row = i // 2
+                col = i % 2
+                self.cards_grid.addWidget(card, row, col)
+            
+            # Update card data
+            self.status_cards[node_id].update_data(node)
+    
     def clear_display(self):
         """Clear all metrics display."""
         self.overall_health.setValue(0)
@@ -336,3 +366,9 @@ class MetricsWidget(QWidget):
         for curve in self.graph_curves.values():
             curve.clear()
         self.graph_curves.clear()
+        
+        # Clear status cards
+        for card in self.status_cards.values():
+            self.cards_grid.removeWidget(card)
+            card.deleteLater()
+        self.status_cards.clear()
