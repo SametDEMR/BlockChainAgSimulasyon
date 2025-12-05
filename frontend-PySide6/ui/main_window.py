@@ -1,9 +1,9 @@
 """Main Window for PySide6 Blockchain Simulator."""
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QStatusBar, QStackedWidget
+    QPushButton, QLabel, QStatusBar, QTabWidget
 )
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 
 
@@ -11,13 +11,7 @@ class MainWindow(QMainWindow):
     """Main application window."""
     
     def __init__(self, api_client, data_manager, updater):
-        """Initialize main window.
-        
-        Args:
-            api_client: APIClient instance
-            data_manager: DataManager instance
-            updater: DataUpdater instance
-        """
+        """Initialize main window."""
         super().__init__()
         
         self.api_client = api_client
@@ -29,13 +23,10 @@ class MainWindow(QMainWindow):
         
         self._setup_ui()
         self._setup_connections()
-        
-        # Check backend connection on startup
         self._check_connection()
     
     def _setup_ui(self):
         """Setup UI components."""
-        # Central widget with stacked pages
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         
@@ -45,14 +36,19 @@ class MainWindow(QMainWindow):
         toolbar_layout = self._create_toolbar()
         layout.addLayout(toolbar_layout)
         
-        # Stacked widget for pages
-        self.stack = QStackedWidget()
-        layout.addWidget(self.stack)
+        # Tab Widget
+        self.tabs = QTabWidget()
+        layout.addWidget(self.tabs)
         
-        # Add dashboard page
+        # Add pages as tabs
         from ui.pages.dashboard_page import DashboardPage
+        from ui.pages.nodes_page import NodesPage
+        
         self.dashboard_page = DashboardPage(self.data_manager)
-        self.stack.addWidget(self.dashboard_page)
+        self.nodes_page = NodesPage(self.data_manager)
+        
+        self.tabs.addTab(self.dashboard_page, "📊 Dashboard")
+        self.tabs.addTab(self.nodes_page, "🖥️ Nodes")
         
         # Status bar
         self.status_bar = QStatusBar()
@@ -88,15 +84,11 @@ class MainWindow(QMainWindow):
     
     def _setup_connections(self):
         """Setup signal connections."""
-        # Button connections
         self.btn_start.clicked.connect(self._on_start)
         self.btn_stop.clicked.connect(self._on_stop)
         self.btn_reset.clicked.connect(self._on_reset)
         
-        # Data manager connections - status_updated removed
         self.data_manager.connection_error.connect(self._on_connection_error)
-        
-        # Updater connections
         self.updater.update_completed.connect(self._on_update_completed)
     
     def _check_connection(self):
@@ -115,8 +107,6 @@ class MainWindow(QMainWindow):
             self.btn_start.setEnabled(False)
             self.btn_stop.setEnabled(True)
             self.status_bar.showMessage("Simulator started", 3000)
-            
-            # Start updater
             self.updater.start_updating()
         else:
             self.status_bar.showMessage("Failed to start simulator", 3000)
@@ -128,8 +118,6 @@ class MainWindow(QMainWindow):
             self.btn_start.setEnabled(True)
             self.btn_stop.setEnabled(False)
             self.status_bar.showMessage("Simulator stopped", 3000)
-            
-            # Stop updater
             self.updater.stop_updating()
         else:
             self.status_bar.showMessage("Failed to stop simulator", 3000)
@@ -142,10 +130,10 @@ class MainWindow(QMainWindow):
             self.btn_stop.setEnabled(False)
             self.status_bar.showMessage("Simulator reset", 3000)
             
-            # Stop updater and clear cache
             self.updater.stop_updating()
             self.data_manager.clear_cache()
             self.dashboard_page.clear_display()
+            self.nodes_page.clear_display()
         else:
             self.status_bar.showMessage("Failed to reset simulator", 3000)
     
@@ -159,8 +147,6 @@ class MainWindow(QMainWindow):
         """Handle update completion."""
         from datetime import datetime
         self.update_label.setText(f"Last update: {datetime.now().strftime('%H:%M:%S')}")
-        
-        # Check connection status
         self._check_connection()
     
     def closeEvent(self, event):

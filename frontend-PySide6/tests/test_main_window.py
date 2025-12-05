@@ -34,7 +34,6 @@ def mock_data_manager():
     """Create mock data manager."""
     from core.data_manager import DataManager
     dm = Mock(spec=DataManager)
-    dm.status_updated = Mock()
     dm.connection_error = Mock()
     dm.clear_cache = Mock()
     return dm
@@ -80,10 +79,18 @@ class TestMainWindow:
         assert main_window.btn_start.isEnabled() is True
         assert main_window.btn_stop.isEnabled() is False
     
+    def test_tabs_exist(self, main_window):
+        """Test tabs widget exists."""
+        assert main_window.tabs is not None
+        assert main_window.tabs.count() == 2
+    
     def test_dashboard_page_exists(self, main_window):
         """Test dashboard page is created."""
         assert main_window.dashboard_page is not None
-        assert main_window.stack.count() >= 1
+    
+    def test_nodes_page_exists(self, main_window):
+        """Test nodes page is created."""
+        assert main_window.nodes_page is not None
     
     def test_start_button_click(self, main_window, mock_api_client, mock_updater):
         """Test start button functionality."""
