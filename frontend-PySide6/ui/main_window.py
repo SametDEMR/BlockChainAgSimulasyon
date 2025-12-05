@@ -1,7 +1,7 @@
 """Main Window for PySide6 Blockchain Simulator."""
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QStatusBar, QTabWidget
+    QPushButton, QLabel, QStatusBar, QTabWidget, QDockWidget
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
@@ -50,6 +50,9 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.dashboard_page, "📊 Dashboard")
         self.tabs.addTab(self.nodes_page, "🖥️ Nodes")
         
+        # Dock Widgets
+        self._create_metrics_dock()
+        
         # Status bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
@@ -81,6 +84,23 @@ class MainWindow(QMainWindow):
         layout.addStretch()
         
         return layout
+    
+    def _create_metrics_dock(self):
+        """Create metrics dashboard as right dock widget."""
+        from ui.widgets.metrics_widget import MetricsWidget
+        
+        # Create dock widget
+        self.metrics_dock = QDockWidget("Metrics Dashboard", self)
+        self.metrics_dock.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
+        
+        # Create metrics widget
+        self.metrics_widget = MetricsWidget(self.data_manager)
+        
+        # Add to dock
+        self.metrics_dock.setWidget(self.metrics_widget)
+        
+        # Add dock to main window (right side)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.metrics_dock)
     
     def _setup_connections(self):
         """Setup signal connections."""
@@ -134,6 +154,7 @@ class MainWindow(QMainWindow):
             self.data_manager.clear_cache()
             self.dashboard_page.clear_display()
             self.nodes_page.clear_display()
+            self.metrics_widget.clear_display()
         else:
             self.status_bar.showMessage("Failed to reset simulator", 3000)
     
