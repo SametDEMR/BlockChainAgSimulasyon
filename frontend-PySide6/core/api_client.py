@@ -1,0 +1,144 @@
+"""API Client for backend communication."""
+import requests
+from typing import Dict, List, Optional
+from urllib.parse import urljoin
+
+
+class APIClient:
+    """Client for communicating with FastAPI backend."""
+    
+    def __init__(self, base_url: str = "http://localhost:8000"):
+        """Initialize API client.
+        
+        Args:
+            base_url: Backend API base URL
+        """
+        self.base_url = base_url.rstrip('/')
+        self.session = requests.Session()
+        self.timeout = 5
+        self._max_retries = 3
+    
+    def _request(self, method: str, endpoint: str, **kwargs) -> Optional[Dict]:
+        """Make HTTP request with retry logic.
+        
+        Args:
+            method: HTTP method (GET, POST, etc.)
+            endpoint: API endpoint
+            **kwargs: Additional request parameters
+            
+        Returns:
+            Response data or None on error
+        """
+        url = f"{self.base_url}{endpoint}"
+        
+        for attempt in range(self._max_retries):
+            try:
+                response = self.session.request(
+                    method, url, timeout=self.timeout, **kwargs
+                )
+                response.raise_for_status()
+                return response.json()
+            except requests.exceptions.ConnectionError:
+                if attempt == self._max_retries - 1:
+                    return None
+            except requests.exceptions.Timeout:
+                if attempt == self._max_retries - 1:
+                    return None
+            except requests.exceptions.HTTPError as e:
+                return {"error": str(e)}
+            except Exception as e:
+                return {"error": str(e)}
+        return None
+    
+    def is_connected(self) -> bool:
+        """Check if backend is accessible.
+        
+        Returns:
+            True if connected, False otherwise
+        """
+        try:
+            response = self.session.get(
+                f"{self.base_url}/", 
+                timeout=2
+            )
+            return response.status_code == 200
+        except:
+            return False
+    
+    # Simulator Control
+    def start_simulator(self) -> Dict:
+        """Start the simulator."""
+        return self._request("POST", "/start")
+    
+    def stop_simulator(self) -> Dict:
+        """Stop the simulator."""
+        return self._request("POST", "/stop")
+    
+    def reset_simulator(self) -> Dict:
+        """Reset the simulator."""
+        return self._request("POST", "/reset")
+    
+    # Data Fetching
+    def get_status(self) -> Dict:
+        """Get simulator status."""
+        return self._request("GET", "/status")
+    
+    def get_nodes(self) -> List:
+        """Get all nodes."""
+        result = self._request("GET", "/nodes")
+        return result.get("nodes", []) if result else []
+    
+    def get_node_detail(self, node_id: str) -> Dict:
+        """Get specific node details."""
+        return self._request("GET", f"/nodes/{node_id}")
+    
+    def get_blockchain(self) -> Dict:
+        """Get blockchain data."""
+        return self._request("GET", "/blockchain")
+    
+    def get_fork_status(self) -> Dict:
+        """Get fork status."""
+        return self._request("GET", "/blockchain/fork-status")
+    
+    def get_pbft_status(self) -> Dict:
+        """Get PBFT consensus status."""
+        return self._request("GET", "/pbft/status")
+    
+    def get_network_messages(self) -> Dict:
+        """Get network message traffic."""
+        return self._request("GET", "/network/messages")
+    
+    def get_metrics(self) -> Dict:
+        """Get all node metrics."""
+        return self._request("GET", "/metrics")
+    
+    def get_node_metrics(self, node_id: str) -> Dict:
+        """Get specific node metrics."""
+        return self._request("GET", f"/metrics/{node_id}")
+    
+    # Attack Triggers
+    def trigger_attack(
+        self, 
+        attack_type: str, 
+        target: Optional[str] = None,
+        parameters: Optional[Dict] = None
+    ) -> Dict:
+        """Trigger an attack."""
+        payload = {
+            "type": attack_type,
+            "target": target,
+            "parameters": parameters or {}
+        }
+        return self._request("POST", "/attack/trigger", json=payload)
+    
+    def stop_attack(self, attack_id: str) -> Dict:
+        """Stop an active attack."""
+        return self._request("POST", f"/attack/stop/{attack_id}")
+    
+    def get_attack_status(self) -> Dict:
+        """Get attack status."""
+        return self._request("GET", "/attack/status")
+    
+    def get_specific_attack_status(self, attack_id: str) -> Dict:
+        """Get specific attack status."""
+        return self._request("GET", f"/attack/status/{attack_id}")
