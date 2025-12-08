@@ -512,9 +512,42 @@ Node Update:
 
 ---
 
+### 4.6 Interactivity ✅
+**Tarih:** On yedinci adım
+**Dosyalar:**
+- `ui/widgets/network_graph_widget.py` (güncellendi)
+- `tests/test_network_interactivity.py` - 29 test PASSED
+
+**Özellikler:**
+- **Hover Effects:**
+  - `setAcceptHoverEvents(True)` - NodeItem hover kabul eder
+  - `hoverEnterEvent()` - Border 4px beyaz, vurgu
+  - `hoverLeaveEvent()` - Orijinal border restore
+  - Tüm node tipleri için çalışır (validator, sybil, under_attack)
+- **Node Drag + Edge Update:**
+  - `ItemSendsGeometryChanges` flag
+  - `itemChange()` - Pozisyon değişince otomatik edge güncelleme
+  - `edge_connections: Dict[edge, (node1, node2)]` - Edge tracking
+  - `get_edges_for_node(node_id)` - Node'un tüm edge'lerini getir
+  - `update_edges_for_node(node_id)` - Edge pozisyonlarını güncelle
+  - Multiple node moves desteklenir
+  - Sadece bağlı edge'ler güncellenir (performans)
+
+**Test Kapsamı:**
+- Hover enter/leave (border width, color)
+- Farklı node tipleri hover
+- Multiple hover cycles
+- Selection + hover kombinasyonu
+- Edge update on drag
+- Edge tracking dict
+- Otomatik edge güncelleme (itemChange)
+- Integration testleri
+
+---
+
 ## Milestone-4 Özet
 
-**Tamamlanan Testler:** 51 PASSED (14 + 18 + 14 + 5)
+**Tamamlanan Testler:** 80 PASSED (14 + 18 + 14 + 5 + 29)
 
 **Çalışan Özellikler:**
 - ✅ Network Map page (QGraphicsView)
@@ -522,16 +555,37 @@ Node Update:
 - ✅ 5 node type görselleştirmesi
 - ✅ Interactive zoom (mouse wheel)
 - ✅ Node selection ve highlighting
+- ✅ **Hover effects (border highlight)**
+- ✅ **Node drag with real-time edge updates**
+- ✅ Edge tracking system
 - ✅ Real-time güncelleme
 - ✅ MainWindow tab entegrasyonu
 
 **Dosya Yapısı:**
 ```
-frontend-PySide6/ui/
-├── widgets/
-│   └── network_graph_widget.py     ← YENİ
-└── pages/
-    └── network_page.py              ← YENİ
+frontend-PySide6/
+├── ui/
+│   ├── widgets/
+│   │   └── network_graph_widget.py (güncellendi - hover + drag)
+│   └── pages/
+│       └── network_page.py
+└── tests/
+    ├── test_network_page.py
+    ├── test_network_graph_widget.py
+    └── test_network_interactivity.py    ← YENİ (29 tests)
+```
+
+**Signal Flow:**
+```
+Node Drag:
+  NodeItem.itemChange(ItemPositionHasChanged)
+    → NetworkGraphWidget.update_edges_for_node(node_id)
+    → edge_connections dict lookup
+    → QGraphicsLineItem.setLine(x1, y1, x2, y2)
+
+Hover:
+  hoverEnterEvent() → setPen(white, 4px)
+  hoverLeaveEvent() → setPen(original)
 ```
 
 ---
