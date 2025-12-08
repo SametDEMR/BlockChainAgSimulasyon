@@ -19,6 +19,7 @@ class NetworkMapPage(QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.data_manager = None
         self._setup_ui()
         self._connect_signals()
         
@@ -82,6 +83,13 @@ class NetworkMapPage(QWidget):
         
         # Forward graph widget signals
         self.graph_widget.node_clicked.connect(self.node_selected.emit)
+    
+    def set_data_manager(self, data_manager):
+        """Set data manager and connect signals"""
+        self.data_manager = data_manager
+        if data_manager:
+            # Connect to nodes_updated signal
+            data_manager.nodes_updated.connect(self.update_network)
     
     # Public methods for data updates
     @Slot(list)

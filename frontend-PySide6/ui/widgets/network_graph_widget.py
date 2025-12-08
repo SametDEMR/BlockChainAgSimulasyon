@@ -172,7 +172,7 @@ class NetworkGraphWidget(QGraphicsView):
         Args:
             nodes: List of node dictionaries
         """
-        if not nodes:
+        if not nodes or nodes is None:
             self.clear_graph()
             return
         
@@ -190,6 +190,10 @@ class NetworkGraphWidget(QGraphicsView):
         
         # Create nodes
         for node_data in nodes:
+            # Skip nodes without id
+            if 'id' not in node_data:
+                continue
+                
             node_id = node_data['id']
             if node_id in self.node_positions:
                 x, y = self.node_positions[node_id]
@@ -206,11 +210,14 @@ class NetworkGraphWidget(QGraphicsView):
         
         # Add nodes
         for node in nodes:
+            # Skip nodes without id
+            if 'id' not in node:
+                continue
             G.add_node(node['id'])
         
         # Add edges (simple: connect validators to each other, regulars to validators)
-        validators = [n['id'] for n in nodes if n.get('role') == 'validator']
-        regulars = [n['id'] for n in nodes if n.get('role') != 'validator']
+        validators = [n['id'] for n in nodes if 'id' in n and n.get('role') == 'validator']
+        regulars = [n['id'] for n in nodes if 'id' in n and n.get('role') != 'validator']
         
         # Connect all validators
         for i, v1 in enumerate(validators):
@@ -231,8 +238,8 @@ class NetworkGraphWidget(QGraphicsView):
     
     def _create_edges(self, nodes: List[Dict]):
         """Create edge items between connected nodes"""
-        validators = [n['id'] for n in nodes if n.get('role') == 'validator']
-        regulars = [n['id'] for n in nodes if n.get('role') != 'validator']
+        validators = [n['id'] for n in nodes if 'id' in n and n.get('role') == 'validator']
+        regulars = [n['id'] for n in nodes if 'id' in n and n.get('role') != 'validator']
         
         pen = QPen(QColor("#3D3D3D"), 1)
         
