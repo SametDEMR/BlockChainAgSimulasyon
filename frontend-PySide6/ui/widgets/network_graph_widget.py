@@ -4,7 +4,7 @@ Custom QGraphicsView for displaying network topology
 """
 from PySide6.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, 
-    QGraphicsLineItem, QGraphicsTextItem
+    QGraphicsLineItem, QGraphicsTextItem, QGraphicsItem
 )
 from PySide6.QtCore import Qt, Signal, QPointF, QRectF
 from PySide6.QtGui import QPen, QBrush, QColor, QPainter
@@ -21,11 +21,19 @@ class NodeItem(QGraphicsEllipseItem):
         self.setPos(x, y)
         self.setFlags(
             QGraphicsEllipseItem.ItemIsSelectable |
-            QGraphicsEllipseItem.ItemIsMovable
+            QGraphicsEllipseItem.ItemIsMovable |
+            QGraphicsEllipseItem.ItemSendsGeometryChanges
         )
         
+        # Enable hover events
+        self.setAcceptHoverEvents(True)
+        
+        # Store original pen for restoring after hover
+        self._original_pen = QPen(QColor("#3D3D3D"), 2)
+        self._hover_pen = QPen(QColor("#FFFFFF"), 4)
+        
         # Default style
-        self.setPen(QPen(QColor("#3D3D3D"), 2))
+        self.setPen(self._original_pen)
         self.setBrush(QBrush(QColor("#4CAF50")))
         
         # Label
@@ -35,6 +43,9 @@ class NodeItem(QGraphicsEllipseItem):
         
         # Store node data
         self.node_data = {}
+        
+        # Track hover state
+        self._is_hovered = False
     
     def update_style(self, node_data: Dict):
         """Update node style based on data"""
@@ -54,11 +65,41 @@ class NodeItem(QGraphicsEllipseItem):
         
         self.setBrush(QBrush(QColor(color)))
         
-        # Border for selected
+        # Update original pen based on selection
         if self.isSelected():
-            self.setPen(QPen(QColor("#FFFFFF"), 3))
+            self._original_pen = QPen(QColor("#FFFFFF"), 3)
         else:
-            self.setPen(QPen(QColor("#3D3D3D"), 2))
+            self._original_pen = QPen(QColor("#3D3D3D"), 2)
+        
+        # Apply current pen (hover or original)
+        if self._is_hovered:
+            self.setPen(self._hover_pen)
+        else:
+            self.setPen(self._original_pen)
+    
+    def hoverEnterEvent(self, event):
+        """Handle hover enter - increase border width and change color"""
+        self._is_hovered = True
+        self.setPen(self._hover_pen)
+        super().hoverEnterEvent(event)
+    
+    def hoverLeaveEvent(self, event):
+        """Handle hover leave - restore original border"""
+        self._is_hovered = False
+        self.setPen(self._original_pen)
+        super().hoverLeaveEvent(event)
+    
+    def itemChange(self, change, value):
+        """Handle item changes - update edges when position changes"""
+        if change == QGraphicsItem.ItemPositionHasChanged:
+            # Notify parent widget to update edges
+            scene = self.scene()
+            if scene and hasattr(scene, 'views'):
+                views = scene.views()
+                if views and hasattr(views[0], 'update_edges_for_node'):
+                    views[0].update_edges_for_node(self.node_id)
+        
+        return super().itemChange(change, value)
     
     def get_tooltip_text(self) -> str:
         """Generate tooltip text from node data"""
@@ -108,6 +149,7 @@ class NetworkGraphWidget(QGraphicsView):
         self.node_items: Dict[str, NodeItem] = {}
         self.edge_items: List[QGraphicsLineItem] = []
         self.node_positions: Dict[str, tuple] = {}
+        self.edge_connections: Dict[QGraphicsLineItem, tuple] = {}  # edge -> (node1_id, node2_id)
         
         # Zoom settings
         self.zoom_factor = 1.15
@@ -121,6 +163,7 @@ class NetworkGraphWidget(QGraphicsView):
         self.node_items.clear()
         self.edge_items.clear()
         self.node_positions.clear()
+        self.edge_connections.clear()
     
     def update_graph(self, nodes: List[Dict]):
         """
@@ -140,6 +183,7 @@ class NetworkGraphWidget(QGraphicsView):
         self.scene.clear()
         self.node_items.clear()
         self.edge_items.clear()
+        self.edge_connections.clear()
         
         # Create edges
         self._create_edges(nodes)
@@ -203,6 +247,7 @@ class NetworkGraphWidget(QGraphicsView):
                     line.setZValue(-1)  # Behind nodes
                     self.scene.addItem(line)
                     self.edge_items.append(line)
+                    self.edge_connections[line] = (v1, v2)
         
         # Connect regulars to first validator
         if validators:
@@ -216,6 +261,58 @@ class NetworkGraphWidget(QGraphicsView):
                     line.setZValue(-1)
                     self.scene.addItem(line)
                     self.edge_items.append(line)
+                    self.edge_connections[line] = (v, regular)
+    
+    def get_edges_for_node(self, node_id: str) -> List[QGraphicsLineItem]:
+        """
+        Get all edges connected to a specific node
+        
+        Args:
+            node_id: Node ID to get edges for
+            
+        Returns:
+            List of QGraphicsLineItem connected to this node
+        """
+        connected_edges = []
+        for edge, (node1, node2) in self.edge_connections.items():
+            if node1 == node_id or node2 == node_id:
+                connected_edges.append(edge)
+        return connected_edges
+    
+    def update_edges_for_node(self, node_id: str):
+        """
+        Update edge positions for a specific node
+        
+        Args:
+            node_id: Node ID whose edges should be updated
+        """
+        if node_id not in self.node_items:
+            return
+        
+        node_item = self.node_items[node_id]
+        node_pos = node_item.pos()
+        
+        # Update all edges connected to this node
+        for edge, (node1, node2) in self.edge_connections.items():
+            if node1 == node_id or node2 == node_id:
+                # Get positions of both endpoints
+                if node1 == node_id:
+                    x1, y1 = node_pos.x(), node_pos.y()
+                    if node2 in self.node_items:
+                        other_pos = self.node_items[node2].pos()
+                        x2, y2 = other_pos.x(), other_pos.y()
+                    else:
+                        continue
+                else:  # node2 == node_id
+                    if node1 in self.node_items:
+                        other_pos = self.node_items[node1].pos()
+                        x1, y1 = other_pos.x(), other_pos.y()
+                    else:
+                        continue
+                    x2, y2 = node_pos.x(), node_pos.y()
+                
+                # Update edge line
+                edge.setLine(x1, y1, x2, y2)
     
     def highlight_node(self, node_id: str):
         """Highlight specific node"""
