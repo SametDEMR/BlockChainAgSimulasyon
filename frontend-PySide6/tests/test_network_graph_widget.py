@@ -114,6 +114,114 @@ class TestNetworkGraphWidget:
         graph_widget.update_graph(sample_nodes)
         assert len(graph_widget.edge_items) > 0
     
+    def test_edge_count_validators_only(self, graph_widget):
+        """Test edge count with validators only - complete mesh"""
+        # 3 validators = 3*(3-1)/2 = 3 edges
+        validators = [
+            {'id': 'v0', 'role': 'validator', 'status': 'healthy'},
+            {'id': 'v1', 'role': 'validator', 'status': 'healthy'},
+            {'id': 'v2', 'role': 'validator', 'status': 'healthy'},
+        ]
+        graph_widget.update_graph(validators)
+        assert len(graph_widget.edge_items) == 3
+    
+    def test_edge_count_with_regulars(self, graph_widget):
+        """Test edge count with validators and regular nodes"""
+        nodes = [
+            {'id': 'v0', 'role': 'validator', 'status': 'healthy'},
+            {'id': 'v1', 'role': 'validator', 'status': 'healthy'},
+            {'id': 'r0', 'role': 'regular', 'status': 'healthy'},
+            {'id': 'r1', 'role': 'regular', 'status': 'healthy'},
+        ]
+        graph_widget.update_graph(nodes)
+        # 2 validators: 1 edge, 2 regulars to v0: 2 edges = 3 total
+        assert len(graph_widget.edge_items) == 3
+    
+    def test_edge_z_order(self, graph_widget, sample_nodes):
+        """Test edges are behind nodes (z-value = -1)"""
+        graph_widget.update_graph(sample_nodes)
+        for edge in graph_widget.edge_items:
+            assert edge.zValue() == -1
+    
+    def test_edge_style(self, graph_widget, sample_nodes):
+        """Test edge pen color and width"""
+        graph_widget.update_graph(sample_nodes)
+        for edge in graph_widget.edge_items:
+            pen = edge.pen()
+            assert pen.width() == 1
+            assert pen.color().name() == '#3d3d3d'
+    
+    def test_edges_cleared_on_update(self, graph_widget, sample_nodes):
+        """Test old edges are cleared when graph is updated"""
+        graph_widget.update_graph(sample_nodes)
+        initial_count = len(graph_widget.edge_items)
+        
+        fewer_nodes = sample_nodes[:3]
+        graph_widget.update_graph(fewer_nodes)
+        assert len(graph_widget.edge_items) != initial_count
+    
+    def test_no_edges_single_node(self, graph_widget):
+        """Test no edges with single node"""
+        single = [{'id': 'solo', 'role': 'validator', 'status': 'healthy'}]
+        graph_widget.update_graph(single)
+        assert len(graph_widget.edge_items) == 0
+    
+    def test_edges_in_scene(self, graph_widget, sample_nodes):
+        """Test edges are added to scene"""
+        graph_widget.update_graph(sample_nodes)
+        scene_items = graph_widget.scene.items()
+        for edge in graph_widget.edge_items:
+            assert edge in scene_items
+    
+    def test_edges_connect_correct_nodes(self, graph_widget):
+        """Test edges connect between correct positions"""
+        nodes = [
+            {'id': 'v0', 'role': 'validator', 'status': 'healthy'},
+            {'id': 'v1', 'role': 'validator', 'status': 'healthy'},
+        ]
+        graph_widget.update_graph(nodes)
+        assert len(graph_widget.edge_items) == 1
+        
+        edge = graph_widget.edge_items[0]
+        line = edge.line()
+        v0_pos = graph_widget.node_positions['v0']
+        v1_pos = graph_widget.node_positions['v1']
+        
+        # Edge endpoints match node positions
+        assert (line.x1(), line.y1()) == v0_pos
+        assert (line.x2(), line.y2()) == v1_pos
+    
+    def test_validator_mesh_topology(self, graph_widget):
+        """Test validators form complete mesh"""
+        validators = [
+            {'id': f'v{i}', 'role': 'validator', 'status': 'healthy'}
+            for i in range(4)
+        ]
+        graph_widget.update_graph(validators)
+        # 4 validators: 4*3/2 = 6 edges
+        assert len(graph_widget.edge_items) == 6
+    
+    def test_regular_to_validator_topology(self, graph_widget):
+        """Test regular nodes connect to first validator"""
+        nodes = [
+            {'id': 'v0', 'role': 'validator', 'status': 'healthy'},
+            {'id': 'r0', 'role': 'regular', 'status': 'healthy'},
+            {'id': 'r1', 'role': 'regular', 'status': 'healthy'},
+        ]
+        graph_widget.update_graph(nodes)
+        # 1 validator (0 v-v edges), 2 regulars to v0 = 2 edges
+        assert len(graph_widget.edge_items) == 2
+    
+    def test_no_edges_regulars_only(self, graph_widget):
+        """Test no edges when only regular nodes (no validators)"""
+        regulars = [
+            {'id': 'r0', 'role': 'regular', 'status': 'healthy'},
+            {'id': 'r1', 'role': 'regular', 'status': 'healthy'},
+        ]
+        graph_widget.update_graph(regulars)
+        # No validators = no edges
+        assert len(graph_widget.edge_items) == 0
+    
     def test_zoom_in(self, graph_widget):
         """Test zoom in"""
         initial_zoom = graph_widget.current_zoom
