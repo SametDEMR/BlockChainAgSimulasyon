@@ -451,13 +451,95 @@ Node Update:
 
 ---
 
-## Sonraki: Milestone-4
+## Milestone-4: Network Map ve Görselleştirme ✅
+
+### 4.1 Network Page - Temel Yapı ✅
+**Tarih:** On üçüncü adım
+**Dosyalar:**
+- `ui/pages/network_page.py` - Network Map sayfası
+- `tests/test_network_page.py` - 14 test PASSED
+
+**Özellikler:**
+- Control buttons (Zoom In/Out, Fit View, Reset)
+- Graph area placeholder
+- Legend (5 node type: Validator, Regular, Sybil, Byzantine, Under Attack)
+- Signal: `node_selected(str)`
+- Public methods: `update_network()`, `clear_network()`, `highlight_node()`, `get_selected_node()`
+
+---
+
+### 4.2 NetworkGraphWidget - Custom QGraphicsView ✅
+**Tarih:** On dördüncü adım
+**Dosyalar:**
+- `ui/widgets/network_graph_widget.py` - NetworkGraphWidget & NodeItem
+- `ui/widgets/__init__.py` (güncellendi)
+- `tests/test_network_graph_widget.py` - 18 test PASSED
+
+**Özellikler:**
+- **NodeItem:** Custom node görselleştirme, 5 renk, tooltip
+- **NetworkGraphWidget:** QGraphicsScene, NetworkX layout, zoom, selection
+- Signals: `node_clicked(str)`, `node_double_clicked(str)`
+
+**Node Renkleri:**
+- 🔷 Validator: #2196F3, 🟢 Regular: #4CAF50, 🔴 Sybil: #F44336
+- 🟠 Byzantine: #FF9800, 🟡 Under Attack: #FFC107
+
+---
+
+### 4.3 Network Page + Widget Entegrasyonu ✅
+**Tarih:** On beşinci adım
+**Dosyalar:**
+- `ui/pages/network_page.py` (güncellendi)
+- `tests/test_network_page.py` (14 test PASSED)
+
+**Özellikler:**
+- NetworkGraphWidget entegre edildi
+- Control butonları bağlandı
+- Signal forwarding: `graph_widget.node_clicked` → `node_selected`
+
+---
+
+### 4.4 MainWindow Entegrasyonu ✅
+**Tarih:** On altıncı adım
+**Dosyalar:**
+- `ui/main_window.py` (güncellendi)
+- `tests/test_main_window_network.py` - 5 test PASSED
+
+**Özellikler:**
+- Network Map tab eklendi (🗺️ Network Map)
+- Signal: `data_manager.nodes_updated` → `network_page.update_network()`
+- Reset butonu network page'i temizler
+
+---
+
+## Milestone-4 Özet
+
+**Tamamlanan Testler:** 51 PASSED (14 + 18 + 14 + 5)
+
+**Çalışan Özellikler:**
+- ✅ Network Map page (QGraphicsView)
+- ✅ NetworkX spring layout
+- ✅ 5 node type görselleştirmesi
+- ✅ Interactive zoom (mouse wheel)
+- ✅ Node selection ve highlighting
+- ✅ Real-time güncelleme
+- ✅ MainWindow tab entegrasyonu
+
+**Dosya Yapısı:**
+```
+frontend-PySide6/ui/
+├── widgets/
+│   └── network_graph_widget.py     ← YENİ
+└── pages/
+    └── network_page.py              ← YENİ
+```
+
+---
+
+## Sonraki: Milestone-5
 
 **Plan:**
 - PBFT Status & Messages (Bottom Dock)
-- PBFT status display (Primary, View, Consensus)
-- Message traffic table (Pre-prepare, Prepare, Commit)
-- Real-time message updates
 
 ---
 
@@ -487,13 +569,15 @@ frontend-PySide6/
 │   ├── main_window.py
 │   └── pages/
 │       ├── dashboard_page.py
-│       └── nodes_page.py
+│       ├── nodes_page.py
+│       └── network_page.py
 ├── tests/
 │   ├── test_api_client.py
 │   ├── test_data_manager.py
 │   ├── test_updater.py
 │   ├── test_main_window.py
-│   └── test_nodes_page.py
+│   ├── test_nodes_page.py
+│   └── test_network_page.py
 ├── main.py
 └── requirements.txt
 ```
