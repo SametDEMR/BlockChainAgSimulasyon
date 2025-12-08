@@ -4,10 +4,11 @@ Displays network topology with interactive controls
 """
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-    QGroupBox, QLabel, QFrame
+    QGroupBox, QLabel
 )
 from PySide6.QtCore import Signal, Slot
 from typing import List, Dict
+from ui.widgets.network_graph_widget import NetworkGraphWidget
 
 
 class NetworkMapPage(QWidget):
@@ -42,17 +43,10 @@ class NetworkMapPage(QWidget):
         
         layout.addLayout(controls_layout)
         
-        # Graph area (placeholder for now)
-        self.graph_frame = QFrame()
-        self.graph_frame.setFrameStyle(QFrame.StyledPanel | QFrame.Sunken)
-        self.graph_frame.setMinimumHeight(400)
-        
-        graph_layout = QVBoxLayout(self.graph_frame)
-        placeholder_label = QLabel("Network Graph Widget\n(Will be implemented in next step)")
-        placeholder_label.setStyleSheet("color: #888; font-size: 14px;")
-        graph_layout.addWidget(placeholder_label)
-        
-        layout.addWidget(self.graph_frame)
+        # Graph widget
+        self.graph_widget = NetworkGraphWidget()
+        self.graph_widget.setMinimumHeight(400)
+        layout.addWidget(self.graph_widget)
         
         # Legend section
         legend_group = QGroupBox("Legend")
@@ -81,31 +75,13 @@ class NetworkMapPage(QWidget):
         
     def _connect_signals(self):
         """Connect internal signals"""
-        self.zoom_in_btn.clicked.connect(self._on_zoom_in)
-        self.zoom_out_btn.clicked.connect(self._on_zoom_out)
-        self.fit_btn.clicked.connect(self._on_fit_view)
-        self.reset_btn.clicked.connect(self._on_reset)
-    
-    # Control slots
-    def _on_zoom_in(self):
-        """Handle zoom in button click"""
-        # Will be implemented with NetworkGraphWidget
-        print("Zoom in clicked")
-    
-    def _on_zoom_out(self):
-        """Handle zoom out button click"""
-        # Will be implemented with NetworkGraphWidget
-        print("Zoom out clicked")
-    
-    def _on_fit_view(self):
-        """Handle fit view button click"""
-        # Will be implemented with NetworkGraphWidget
-        print("Fit view clicked")
-    
-    def _on_reset(self):
-        """Handle reset button click"""
-        # Will be implemented with NetworkGraphWidget
-        print("Reset clicked")
+        self.zoom_in_btn.clicked.connect(self.graph_widget.zoom_in)
+        self.zoom_out_btn.clicked.connect(self.graph_widget.zoom_out)
+        self.fit_btn.clicked.connect(self.graph_widget.fit_view)
+        self.reset_btn.clicked.connect(self.graph_widget.reset_view)
+        
+        # Forward graph widget signals
+        self.graph_widget.node_clicked.connect(self.node_selected.emit)
     
     # Public methods for data updates
     @Slot(list)
@@ -114,30 +90,18 @@ class NetworkMapPage(QWidget):
         Update network visualization with new node data
         
         Args:
-            nodes: List of node dictionaries with structure:
-                {
-                    'id': str,
-                    'role': 'validator' | 'regular',
-                    'status': 'healthy' | 'under_attack' | 'recovering',
-                    'is_sybil': bool,
-                    'is_byzantine': bool,
-                    ...
-                }
+            nodes: List of node dictionaries
         """
-        # Will be implemented with NetworkGraphWidget
-        print(f"Network update received: {len(nodes)} nodes")
+        self.graph_widget.update_graph(nodes)
     
     def clear_network(self):
         """Clear network visualization"""
-        # Will be implemented with NetworkGraphWidget
-        print("Network cleared")
+        self.graph_widget.clear_graph()
     
     def get_selected_node(self) -> str:
         """Get currently selected node ID"""
-        # Will be implemented with NetworkGraphWidget
-        return ""
+        return self.graph_widget.get_selected_node() or ""
     
     def highlight_node(self, node_id: str):
         """Highlight specific node"""
-        # Will be implemented with NetworkGraphWidget
-        print(f"Highlighting node: {node_id}")
+        self.graph_widget.highlight_node(node_id)

@@ -3,9 +3,10 @@ Tests for Network Map Page
 """
 import pytest
 import sys
-from PySide6.QtWidgets import QApplication, QPushButton, QFrame, QGroupBox
+from PySide6.QtWidgets import QApplication, QPushButton, QGroupBox
 from PySide6.QtCore import Qt
 from ui.pages.network_page import NetworkMapPage
+from ui.widgets.network_graph_widget import NetworkGraphWidget
 
 
 @pytest.fixture
@@ -24,6 +25,15 @@ def network_page(qapp):
     return page
 
 
+@pytest.fixture
+def sample_nodes():
+    """Sample node data"""
+    return [
+        {'id': 'node_0', 'role': 'validator', 'status': 'healthy'},
+        {'id': 'node_1', 'role': 'regular', 'status': 'healthy'},
+    ]
+
+
 class TestNetworkMapPage:
     """Test suite for NetworkMapPage"""
     
@@ -31,6 +41,11 @@ class TestNetworkMapPage:
         """Test page can be created"""
         assert network_page is not None
         assert isinstance(network_page, NetworkMapPage)
+    
+    def test_graph_widget_exists(self, network_page):
+        """Test graph widget is present"""
+        assert network_page.graph_widget is not None
+        assert isinstance(network_page.graph_widget, NetworkGraphWidget)
     
     def test_control_buttons_exist(self, network_page):
         """Test all control buttons are present"""
@@ -50,15 +65,8 @@ class TestNetworkMapPage:
         assert isinstance(network_page.reset_btn, QPushButton)
         assert "Reset" in network_page.reset_btn.text()
     
-    def test_graph_frame_exists(self, network_page):
-        """Test graph frame is present"""
-        assert network_page.graph_frame is not None
-        assert isinstance(network_page.graph_frame, QFrame)
-        assert network_page.graph_frame.minimumHeight() >= 400
-    
     def test_legend_exists(self, network_page):
         """Test legend group box exists"""
-        # Find legend group box
         legend_found = False
         for child in network_page.children():
             if isinstance(child, QGroupBox) and "Legend" in child.title():
@@ -66,62 +74,60 @@ class TestNetworkMapPage:
                 break
         assert legend_found, "Legend group box not found"
     
-    def test_zoom_in_button_click(self, network_page, capsys):
-        """Test zoom in button can be clicked"""
+    def test_zoom_in_button_connected(self, network_page):
+        """Test zoom in button is connected"""
+        initial_zoom = network_page.graph_widget.current_zoom
         network_page.zoom_in_btn.click()
-        captured = capsys.readouterr()
-        assert "Zoom in clicked" in captured.out
+        assert network_page.graph_widget.current_zoom > initial_zoom
     
-    def test_zoom_out_button_click(self, network_page, capsys):
-        """Test zoom out button can be clicked"""
+    def test_zoom_out_button_connected(self, network_page):
+        """Test zoom out button is connected"""
+        network_page.zoom_in_btn.click()
+        initial_zoom = network_page.graph_widget.current_zoom
         network_page.zoom_out_btn.click()
-        captured = capsys.readouterr()
-        assert "Zoom out clicked" in captured.out
+        assert network_page.graph_widget.current_zoom < initial_zoom
     
-    def test_fit_view_button_click(self, network_page, capsys):
-        """Test fit view button can be clicked"""
+    def test_fit_view_button_connected(self, network_page, sample_nodes):
+        """Test fit view button is connected"""
+        network_page.update_network(sample_nodes)
+        network_page.zoom_in_btn.click()
         network_page.fit_btn.click()
-        captured = capsys.readouterr()
-        assert "Fit view clicked" in captured.out
+        assert network_page.graph_widget.current_zoom == 1.0
     
-    def test_reset_button_click(self, network_page, capsys):
-        """Test reset button can be clicked"""
+    def test_reset_button_connected(self, network_page, sample_nodes):
+        """Test reset button is connected"""
+        network_page.update_network(sample_nodes)
+        network_page.zoom_in_btn.click()
         network_page.reset_btn.click()
-        captured = capsys.readouterr()
-        assert "Reset clicked" in captured.out
+        assert network_page.graph_widget.current_zoom == 1.0
     
-    def test_update_network(self, network_page, capsys):
+    def test_update_network(self, network_page, sample_nodes):
         """Test update_network method"""
-        test_nodes = [
-            {'id': 'node_0', 'role': 'validator', 'status': 'healthy'},
-            {'id': 'node_1', 'role': 'regular', 'status': 'healthy'},
-        ]
-        network_page.update_network(test_nodes)
-        captured = capsys.readouterr()
-        assert "Network update received: 2 nodes" in captured.out
+        network_page.update_network(sample_nodes)
+        assert len(network_page.graph_widget.node_items) == len(sample_nodes)
     
-    def test_clear_network(self, network_page, capsys):
+    def test_clear_network(self, network_page, sample_nodes):
         """Test clear_network method"""
+        network_page.update_network(sample_nodes)
+        assert len(network_page.graph_widget.node_items) > 0
         network_page.clear_network()
-        captured = capsys.readouterr()
-        assert "Network cleared" in captured.out
+        assert len(network_page.graph_widget.node_items) == 0
     
-    def test_highlight_node(self, network_page, capsys):
+    def test_highlight_node(self, network_page, sample_nodes):
         """Test highlight_node method"""
-        network_page.highlight_node("node_0")
-        captured = capsys.readouterr()
-        assert "Highlighting node: node_0" in captured.out
+        network_page.update_network(sample_nodes)
+        network_page.highlight_node('node_0')
+        selected = network_page.get_selected_node()
+        assert selected == 'node_0'
     
     def test_get_selected_node(self, network_page):
         """Test get_selected_node method"""
-        # Should return empty string initially (no graph widget yet)
         selected = network_page.get_selected_node()
         assert selected == ""
     
     def test_node_selected_signal(self, network_page):
         """Test node_selected signal exists"""
         assert hasattr(network_page, 'node_selected')
-        # Signal will be tested when NetworkGraphWidget is implemented
     
     def test_buttons_enabled(self, network_page):
         """Test all buttons are enabled by default"""
