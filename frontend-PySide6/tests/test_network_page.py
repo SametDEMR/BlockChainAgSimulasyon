@@ -19,9 +19,19 @@ def qapp():
 
 
 @pytest.fixture
-def network_page(qapp):
+def mock_data_manager():
+    """Mock data manager fixture"""
+    from unittest.mock import Mock
+    dm = Mock()
+    dm.nodes_updated = Mock()
+    dm.nodes_updated.connect = Mock()
+    return dm
+
+
+@pytest.fixture
+def network_page(qapp, mock_data_manager):
     """Network page fixture"""
-    page = NetworkMapPage()
+    page = NetworkMapPage(mock_data_manager)
     return page
 
 
@@ -41,6 +51,15 @@ class TestNetworkMapPage:
         """Test page can be created"""
         assert network_page is not None
         assert isinstance(network_page, NetworkMapPage)
+    
+    def test_has_data_manager(self, network_page, mock_data_manager):
+        """Test page has data manager"""
+        assert network_page.data_manager is mock_data_manager
+    
+    def test_data_manager_signal_connected(self, mock_data_manager):
+        """Test data manager nodes_updated signal is connected"""
+        page = NetworkMapPage(mock_data_manager)
+        mock_data_manager.nodes_updated.connect.assert_called_once()
     
     def test_graph_widget_exists(self, network_page):
         """Test graph widget is present"""

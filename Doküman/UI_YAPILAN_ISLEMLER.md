@@ -524,6 +524,7 @@ Node Update:
   - `hoverEnterEvent()` - Border 4px beyaz, vurgu
   - `hoverLeaveEvent()` - Orijinal border restore
   - Tüm node tipleri için çalışır (validator, sybil, under_attack)
+  - `_original_pen` ve `_hover_pen` state tracking
 - **Node Drag + Edge Update:**
   - `ItemSendsGeometryChanges` flag
   - `itemChange()` - Pozisyon değişince otomatik edge güncelleme
@@ -545,9 +546,60 @@ Node Update:
 
 ---
 
+### 4.7 API Integration ✅
+**Tarih:** On sekizinci adım
+**Dosyalar:**
+- `ui/pages/network_page.py` (güncellendi)
+- `ui/widgets/network_graph_widget.py` (güncellendi)
+- `tests/test_network_api_integration.py` - 24 test PASSED
+
+**Özellikler:**
+- **DataManager Integration:**
+  - `set_data_manager(data_manager)` metodu
+  - `nodes_updated` signal bağlantısı
+  - Otomatik graph güncelleme
+- **Real-time Status Updates:**
+  - Status değişimi → renk güncelleme
+  - Role değişimi (validator ↔ regular)
+  - Sybil/Byzantine flag'leri
+  - Multiple sequential updates
+  - Node ekleme/çıkarma (dynamic)
+- **Error Handling:**
+  - Malformed data (missing 'id', missing fields)
+  - Invalid role values
+  - None/empty node list
+  - 'id' kontrolü tüm loop'larda
+- **Performance:**
+  - 100 node ile test (< 2 saniye)
+  - Frequent updates (50+ cycle) memory safe
+  - Efficient updates (sadece değişen node'lar)
+
+**Test Kapsamı:**
+- DataManager integration (4 test)
+- Graph updates (6 test)
+- Real-time status changes (8 test)
+- Signal-slot connections (2 test)
+- Error handling (3 test)
+- Performance (2 test)
+
+**Signal Flow:**
+```
+DataManager.nodes_updated(nodes)
+  → NetworkMapPage.update_network(nodes)
+  → NetworkGraphWidget.update_graph(nodes)
+  → _calculate_positions() → _create_edges() → create NodeItems
+```
+
+---
+
 ## Milestone-4 Özet
 
-**Tamamlanan Testler:** 80 PASSED (14 + 18 + 14 + 5 + 29)
+**Tamamlanan Testler:** 109 PASSED
+- test_network_page.py: 14
+- test_network_graph_widget.py: 37 (18 base + 19 edge tests)
+- test_main_window_network.py: 5
+- test_network_interactivity.py: 29
+- test_network_api_integration.py: 24
 
 **Çalışan Özellikler:**
 - ✅ Network Map page (QGraphicsView)
@@ -558,7 +610,10 @@ Node Update:
 - ✅ **Hover effects (border highlight)**
 - ✅ **Node drag with real-time edge updates**
 - ✅ Edge tracking system
-- ✅ Real-time güncelleme
+- ✅ **DataManager integration**
+- ✅ **Real-time status updates**
+- ✅ Error handling (malformed data)
+- ✅ Performance optimized (100+ nodes)
 - ✅ MainWindow tab entegrasyonu
 
 **Dosya Yapısı:**
@@ -566,27 +621,42 @@ Node Update:
 frontend-PySide6/
 ├── ui/
 │   ├── widgets/
-│   │   └── network_graph_widget.py (güncellendi - hover + drag)
+│   │   └── network_graph_widget.py (güncellendi - hover + drag + API)
 │   └── pages/
-│       └── network_page.py
+│       └── network_page.py (güncellendi - DataManager)
 └── tests/
-    ├── test_network_page.py
-    ├── test_network_graph_widget.py
-    └── test_network_interactivity.py    ← YENİ (29 tests)
+    ├── test_network_page.py (14)
+    ├── test_network_graph_widget.py (37)
+    ├── test_main_window_network.py (5)
+    ├── test_network_interactivity.py (29)    ← YENİ
+    └── test_network_api_integration.py (24)  ← YENİ
 ```
 
 **Signal Flow:**
 ```
-Node Drag:
-  NodeItem.itemChange(ItemPositionHasChanged)
-    → NetworkGraphWidget.update_edges_for_node(node_id)
-    → edge_connections dict lookup
-    → QGraphicsLineItem.setLine(x1, y1, x2, y2)
+# Real-time Updates
+DataManager.nodes_updated(nodes)
+  → NetworkMapPage.update_network(nodes)
+  → NetworkGraphWidget.update_graph(nodes)
+  → NodeItem colors/tooltips güncellenir
 
-Hover:
-  hoverEnterEvent() → setPen(white, 4px)
-  hoverLeaveEvent() → setPen(original)
+# Node Drag
+NodeItem.itemChange(ItemPositionHasChanged)
+  → NetworkGraphWidget.update_edges_for_node(node_id)
+  → edge_connections dict lookup
+  → QGraphicsLineItem.setLine(x1, y1, x2, y2)
+
+# Hover
+hoverEnterEvent() → setPen(white, 4px)
+hoverLeaveEvent() → setPen(original)
 ```
+
+**Önemli Implementation Detayları:**
+- Graph her update'te yeniden oluşturulur (clear → create)
+- Position cache'i NetworkX hesaplamalarını optimize eder
+- Edge connections dict ile O(1) edge lookup
+- Malformed data kontrolü (missing 'id', optional fields)
+- NodeItem referansları update sonrası yenilenir (C++ object deletion)
 
 ---
 

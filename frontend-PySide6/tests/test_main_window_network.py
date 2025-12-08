@@ -93,6 +93,10 @@ class TestNetworkPageIntegration:
         assert hasattr(main_window, 'network_page')
         assert main_window.network_page is not None
     
+    def test_network_page_has_data_manager(self, main_window, mock_data_manager):
+        """Test network page has data manager"""
+        assert main_window.network_page.data_manager is mock_data_manager
+    
     def test_network_page_tab_added(self, main_window):
         """Test network page added to tabs"""
         assert main_window.tabs.count() == 3

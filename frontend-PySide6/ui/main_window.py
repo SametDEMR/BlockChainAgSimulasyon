@@ -47,7 +47,7 @@ class MainWindow(QMainWindow):
         
         self.dashboard_page = DashboardPage(self.data_manager)
         self.nodes_page = NodesPage(self.data_manager)
-        self.network_page = NetworkMapPage()
+        self.network_page = NetworkMapPage(self.data_manager)
         
         self.tabs.addTab(self.dashboard_page, "📊 Dashboard")
         self.tabs.addTab(self.nodes_page, "🖥️ Nodes")
@@ -138,7 +138,6 @@ class MainWindow(QMainWindow):
         
         # Node list updates
         self.data_manager.nodes_updated.connect(self.attack_panel_widget.update_node_list)
-        self.data_manager.nodes_updated.connect(self.network_page.update_network)
     
     def _check_connection(self):
         """Check backend connection."""
