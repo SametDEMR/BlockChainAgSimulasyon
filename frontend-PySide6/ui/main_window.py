@@ -43,12 +43,15 @@ class MainWindow(QMainWindow):
         # Add pages as tabs
         from ui.pages.dashboard_page import DashboardPage
         from ui.pages.nodes_page import NodesPage
+        from ui.pages.network_page import NetworkMapPage
         
         self.dashboard_page = DashboardPage(self.data_manager)
         self.nodes_page = NodesPage(self.data_manager)
+        self.network_page = NetworkMapPage()
         
         self.tabs.addTab(self.dashboard_page, "📊 Dashboard")
         self.tabs.addTab(self.nodes_page, "🖥️ Nodes")
+        self.tabs.addTab(self.network_page, "🗺️ Network Map")
         
         # Dock Widgets
         self._create_attack_panel_dock()
@@ -133,8 +136,9 @@ class MainWindow(QMainWindow):
         self.attack_panel_widget.attack_triggered.connect(self._on_attack_triggered)
         self.attack_panel_widget.attack_stop_requested.connect(self._on_attack_stop_requested)
         
-        # Node list update
+        # Node list updates
         self.data_manager.nodes_updated.connect(self.attack_panel_widget.update_node_list)
+        self.data_manager.nodes_updated.connect(self.network_page.update_network)
     
     def _check_connection(self):
         """Check backend connection."""
@@ -179,6 +183,7 @@ class MainWindow(QMainWindow):
             self.data_manager.clear_cache()
             self.dashboard_page.clear_display()
             self.nodes_page.clear_display()
+            self.network_page.clear_network()
             self.metrics_widget.clear_display()
             self.attack_panel_widget.clear_active_attacks()
         else:
