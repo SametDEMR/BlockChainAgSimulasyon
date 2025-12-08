@@ -259,13 +259,205 @@ DataManager.metrics_updated
 
 ---
 
-## Sonraki: Milestone-3
+## Milestone-3: Attack Control Panel (Left Dock) ✅
+
+### 3.1 Attack Panel Widget - Temel Yapı ✅
+**Tarih:** Onuncu adım
+**Dosyalar:**
+- `ui/widgets/attack_panel_widget.py` - AttackPanelWidget sınıfı
+- `ui/widgets/__init__.py` (güncellendi)
+- `tests/test_attack_panel_widget.py` - 32 test PASSED
+
+**Özellikler:**
+- QToolBox ile 6 attack section
+- DDoS Attack: Target dropdown + Intensity slider (1-10)
+- Byzantine Attack: Validator-only dropdown
+- Sybil Attack: Fake node count slider (5-50)
+- Majority Attack: 51% warning ve trigger
+- Network Partition: Network split
+- Selfish Mining: Miner dropdown
+- Signal: `attack_triggered(str, dict)`
+- `update_node_list(nodes)` metodu
+
+**QToolBox Sections:**
+```
+🌊 DDoS Attack
+⚔️ Byzantine Attack
+👥 Sybil Attack
+⚡ Majority Attack (51%)
+🔌 Network Partition
+💎 Selfish Mining
+```
+
+**Test Kapsamı:**
+- Widget creation ve QToolBox yapısı (6 section)
+- Her attack section kontrolü (dropdown, slider)
+- Signal emission testleri (valid input)
+- Invalid input handling (no signal)
+- Node list güncelleme (validators filtering)
+
+---
+
+### 3.2 Active Attacks Tracking ✅
+**Tarih:** On birinci adım
+**Dosyalar:**
+- `ui/widgets/active_attack_item.py` - ActiveAttackItem widget
+- `ui/widgets/attack_panel_widget.py` (güncellendi)
+- `ui/widgets/__init__.py` (güncellendi)
+- `tests/test_attack_panel_active_attacks.py` - 30 test PASSED
+
+**Özellikler:**
+- Active Attacks section (QToolBox 7. item)
+- QListWidget ile attack listesi
+- Custom ActiveAttackItem widget:
+  - Attack icon + type + target
+  - Progress bar (0-100%)
+  - Remaining time label
+  - Stop button
+- `add_active_attack(attack_data)`
+- `remove_active_attack(attack_id)`
+- `update_active_attack(attack_id, progress, remaining_time)`
+- `clear_active_attacks()`
+- `get_active_attacks_count()`
+- Section title dinamik güncelleme: "⚠️ Active Attacks (N)"
+- Signal: `attack_stop_requested(str)` - Stop butonu
+
+**ActiveAttackItem Widget:**
+```
+┌───────────────────────────┐
+│ ⚠️ DDOS on node_5        │ ← Icon + Type + Target
+│ [████████░░] 80%         │ ← Progress bar
+│ Remaining: 4s   [Stop]   │ ← Time + Stop button
+└───────────────────────────┘
+```
+
+**Test Kapsamı:**
+- Active attacks section varlığı
+- Add/remove/update attack
+- Multiple attacks desteği
+- Duplicate attack ID kontrolü
+- Stop signal emission
+- Clear all attacks
+- Title güncelleme
+
+---
+
+### 3.3 MainWindow Entegrasyonu ✅
+**Tarih:** On ikinci adım
+**Dosyalar:**
+- `ui/main_window.py` (güncellendi)
+- `tests/test_main_window_attack_panel.py` - 20 test PASSED
+
+**Özellikler:**
+- Attack panel QDockWidget (Left side)
+- Title: "Attack Control Panel"
+- Signal/Slot bağlantıları:
+  - `attack_triggered` → `_on_attack_triggered()` → API call
+  - `attack_stop_requested` → `_on_attack_stop_requested()` → API call
+  - `nodes_updated` → `attack_panel_widget.update_node_list()`
+- Attack trigger handling:
+  - API call: `api_client.trigger_attack(type, params)`
+  - Success: Add to active attacks display
+  - Failure: Status bar error message
+- Attack stop handling:
+  - API call: `api_client.stop_attack(attack_id)`
+  - Success: Remove from display
+  - Failure: Keep in display
+- Reset button clears active attacks
+
+**API Flow:**
+```
+User clicks "Trigger Attack"
+  ↓
+attack_triggered signal
+  ↓
+_on_attack_triggered()
+  ↓
+api_client.trigger_attack()
+  ↓
+Backend returns attack_id
+  ↓
+add_active_attack() - Display in UI
+```
+
+**Test Kapsamı:**
+- Dock creation ve positioning
+- Signal connections
+- Successful/failed attack trigger
+- Attack without attack_id
+- Connection error handling
+- Successful/failed attack stop
+- Multiple simultaneous attacks
+- Reset clears attacks
+
+---
+
+## Milestone-3 Özet
+
+**Tamamlanan Testler:** 82 PASSED (32 + 30 + 20)
+
+**Çalışan Özellikler:**
+- ✅ Attack Control Panel (Left Dock)
+- ✅ 6 attack types (DDoS, Byzantine, Sybil, Majority, Partition, Selfish)
+- ✅ QToolBox navigation
+- ✅ Dynamic node dropdowns (validators filtering)
+- ✅ Active attacks tracking (real-time display)
+- ✅ Progress bar ve remaining time
+- ✅ Stop attack functionality
+- ✅ API integration (trigger & stop)
+- ✅ Error handling (API failures)
+- ✅ Reset clears all active attacks
+
+**Dosya Yapısı Güncellemesi:**
+```
+frontend-PySide6/
+├── ui/
+│   ├── widgets/
+│   │   ├── __init__.py
+│   │   ├── metrics_widget.py
+│   │   ├── node_status_card.py
+│   │   ├── attack_panel_widget.py     ← YENİ
+│   │   └── active_attack_item.py      ← YENİ
+│   ├── main_window.py (güncellendi - attack panel dock)
+│   └── pages/
+│       ├── dashboard_page.py
+│       └── nodes_page.py
+├── tests/
+│   ├── test_attack_panel_widget.py           ← YENİ (32)
+│   ├── test_attack_panel_active_attacks.py   ← YENİ (30)
+│   ├── test_main_window_attack_panel.py      ← YENİ (20)
+│   └── ...
+```
+
+**Signal Flow:**
+```
+Attack Trigger:
+  attack_panel_widget.attack_triggered(type, params)
+    → MainWindow._on_attack_triggered()
+    → api_client.trigger_attack()
+    → attack_panel_widget.add_active_attack()
+
+Attack Stop:
+  active_attack_item.stop_requested(attack_id)
+    → attack_panel_widget.attack_stop_requested(attack_id)
+    → MainWindow._on_attack_stop_requested()
+    → api_client.stop_attack()
+    → attack_panel_widget.remove_active_attack()
+
+Node Update:
+  data_manager.nodes_updated(nodes)
+    → attack_panel_widget.update_node_list(nodes)
+```
+
+---
+
+## Sonraki: Milestone-4
 
 **Plan:**
-- Attack Control Panel (Left Dock)
-- DDoS, Byzantine, Sybil attack controls
-- Active attacks tracking
-- Attack trigger buttons
+- PBFT Status & Messages (Bottom Dock)
+- PBFT status display (Primary, View, Consensus)
+- Message traffic table (Pre-prepare, Prepare, Commit)
+- Real-time message updates
 
 ---
 
