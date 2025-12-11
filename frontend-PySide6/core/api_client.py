@@ -104,9 +104,19 @@ class APIClient:
         """Get PBFT consensus status."""
         return self._request("GET", "/pbft/status")
     
-    def get_network_messages(self) -> Dict:
-        """Get network message traffic."""
-        return self._request("GET", "/network/messages")
+    def get_network_messages(self, limit: Optional[int] = None) -> Dict:
+        """Get network message traffic.
+        
+        Args:
+            limit: Maximum number of messages to retrieve
+            
+        Returns:
+            Network messages data
+        """
+        params = {}
+        if limit is not None:
+            params['limit'] = limit
+        return self._request("GET", "/network/messages", params=params)
     
     def get_metrics(self) -> Dict:
         """Get all node metrics."""

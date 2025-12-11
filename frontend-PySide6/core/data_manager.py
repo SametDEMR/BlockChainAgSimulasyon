@@ -172,6 +172,65 @@ class DataManager(QObject):
         """Get cached messages."""
         return self._cache['messages']
     
+    def fetch_pbft_status(self) -> Optional[Dict]:
+        """Fetch PBFT status from API.
+        
+        Returns:
+            PBFT status data with transformed keys
+        """
+        try:
+            pbft = self.api_client.get_pbft_status()
+            if pbft and 'error' not in pbft:
+                # Transform API response to standard format
+                transformed = {
+                    'primary': pbft.get('primary_validator', 'N/A'),
+                    'view': pbft.get('current_view', 0),
+                    'consensus_count': pbft.get('consensus_achieved_count', 0),
+                    'validator_count': pbft.get('total_validators', 0),
+                    'total_messages': pbft.get('total_messages', 0)
+                }
+                return transformed
+            return None
+        except Exception as e:
+            self.api_error.emit(f"PBFT fetch error: {str(e)}")
+            return None
+    
+    def fetch_messages(self, limit: int = 100) -> Optional[Dict]:
+        """Fetch network messages from API.
+        
+        Args:
+            limit: Maximum number of messages to fetch
+            
+        Returns:
+            Messages data (dict or list)
+        """
+        try:
+            messages = self.api_client.get_network_messages()
+            if messages and 'error' not in messages:
+                # Get message list
+                msg_list = messages.get('messages', [])
+                
+                # Apply limit
+                if len(msg_list) > limit:
+                    msg_list = msg_list[-limit:]  # Get last N messages
+                
+                # Transform to standard format
+                transformed = []
+                for msg in msg_list:
+                    transformed.append({
+                        'timestamp': msg.get('timestamp', ''),
+                        'sender': msg.get('sender_id', ''),
+                        'receiver': msg.get('receiver_id', ''),
+                        'type': msg.get('message_type', ''),
+                        'view': msg.get('view_number', 0)
+                    })
+                
+                return {'messages': transformed}
+            return None
+        except Exception as e:
+            self.api_error.emit(f"Messages fetch error: {str(e)}")
+            return None
+    
     def get_cached_fork_status(self) -> Optional[Dict]:
         """Get cached fork status."""
         return self._cache['fork_status']
