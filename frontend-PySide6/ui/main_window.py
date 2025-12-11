@@ -59,6 +59,7 @@ class MainWindow(QMainWindow):
         # Dock Widgets
         self._create_attack_panel_dock()
         self._create_metrics_dock()
+        self._create_pbft_dock()
         
         # Status bar
         self.status_bar = QStatusBar()
@@ -126,6 +127,23 @@ class MainWindow(QMainWindow):
         # Add dock to main window (right side)
         self.addDockWidget(Qt.RightDockWidgetArea, self.metrics_dock)
     
+    def _create_pbft_dock(self):
+        """Create PBFT widget as bottom dock widget."""
+        from ui.widgets.pbft_widget import PBFTWidget
+        
+        # Create dock widget
+        self.pbft_dock = QDockWidget("PBFT Consensus Status", self)
+        self.pbft_dock.setAllowedAreas(Qt.BottomDockWidgetArea | Qt.TopDockWidgetArea)
+        
+        # Create PBFT widget
+        self.pbft_widget = PBFTWidget()
+        
+        # Add to dock
+        self.pbft_dock.setWidget(self.pbft_widget)
+        
+        # Add dock to main window (bottom)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.pbft_dock)
+    
     def _setup_connections(self):
         """Setup signal connections."""
         self.btn_start.clicked.connect(self._on_start)
@@ -141,6 +159,10 @@ class MainWindow(QMainWindow):
         
         # Node list updates
         self.data_manager.nodes_updated.connect(self.attack_panel_widget.update_node_list)
+        
+        # PBFT updates
+        self.data_manager.pbft_updated.connect(self.pbft_widget.update_pbft_status)
+        self.data_manager.messages_updated.connect(self.pbft_widget.update_messages)
     
     def _check_connection(self):
         """Check backend connection."""
@@ -188,6 +210,7 @@ class MainWindow(QMainWindow):
             self.network_page.clear_network()
             self.blockchain_page.clear_display()
             self.metrics_widget.clear_display()
+            self.pbft_widget.clear_display()
             self.attack_panel_widget.clear_active_attacks()
         else:
             self.status_bar.showMessage("Failed to reset simulator", 3000)
