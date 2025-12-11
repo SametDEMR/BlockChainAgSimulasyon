@@ -206,7 +206,10 @@ class MainWindow(QMainWindow):
     
     def _on_attack_triggered(self, attack_type: str, params: dict):
         """Handle attack trigger request."""
-        result = self.api_client.trigger_attack(attack_type, params)
+        # Extract target if it exists
+        target = params.get('target')
+        # Pass parameters properly
+        result = self.api_client.trigger_attack(attack_type, target, params)
         
         if result and 'error' not in result:
             # Attack successfully triggered
