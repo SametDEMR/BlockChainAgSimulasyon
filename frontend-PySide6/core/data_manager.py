@@ -41,6 +41,46 @@ class DataManager(QObject):
             'fork_status': None
         }
     
+    def _parse_blockchain(self, raw_data: dict) -> dict:
+        """Parse backend blockchain data to expected format.
+        
+        Args:
+            raw_data: Raw blockchain data from API
+            
+        Returns:
+            Parsed blockchain data
+        """
+        # Get nested chain data
+        chain_data = raw_data.get('chain', {})
+        blocks_raw = chain_data.get('chain', [])
+        
+        # Parse blocks
+        blocks = []
+        for block in blocks_raw:
+            parsed_block = {
+                'index': block.get('index', 0),
+                'hash': block.get('hash', ''),
+                'previous_hash': block.get('previous_hash', '0'),
+                'miner_id': block.get('miner', 'unknown'),
+                'transaction_count': len(block.get('transactions', [])),
+                'transactions': block.get('transactions', []),
+                'timestamp': block.get('timestamp', ''),
+                'nonce': block.get('nonce', 0),
+                'is_orphan': False,  # Will be set by fork detection
+                'is_malicious': False
+            }
+            blocks.append(parsed_block)
+        
+        # Get fork status
+        fork_status = chain_data.get('fork_status', {})
+        
+        return {
+            'chain_length': chain_data.get('chain_length', 0),
+            'pending_transactions': chain_data.get('pending_transactions_count', 0),
+            'blocks': blocks,
+            'fork_status': fork_status
+        }
+    
     def update_all_data(self):
         """Fetch all data from API and emit signals."""
         try:
@@ -62,8 +102,18 @@ class DataManager(QObject):
             
             blockchain = self.api_client.get_blockchain()
             if blockchain and 'error' not in blockchain:
-                self._cache['blockchain'] = blockchain
-                self.blockchain_updated.emit(blockchain)
+                # Parse blockchain data
+                parsed = self._parse_blockchain(blockchain)
+                self._cache['blockchain'] = parsed
+                self.blockchain_updated.emit(parsed)
+                
+                # Emit fork status separately
+                fork_status = parsed.get('fork_status', {})
+                if fork_status:
+                    self.fork_status_updated.emit({
+                        'active_forks': fork_status.get('alternative_chains_count', 0),
+                        'orphan_blocks': fork_status.get('orphaned_blocks_count', 0)
+                    })
             
             pbft = self.api_client.get_pbft_status()
             if pbft and 'error' not in pbft:

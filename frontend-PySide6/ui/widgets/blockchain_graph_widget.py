@@ -1,7 +1,7 @@
 """Blockchain Graph Widget - Custom QGraphicsView for blockchain visualization."""
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene
 from PySide6.QtCore import Qt, Signal, QRectF
-from PySide6.QtGui import QPainter, QWheelEvent
+from PySide6.QtGui import QPainter, QWheelEvent, QColor, QBrush
 
 
 class BlockchainGraphWidget(QGraphicsView):
@@ -56,8 +56,8 @@ class BlockchainGraphWidget(QGraphicsView):
         # Scene rect will be set when blocks are added
         self.setSceneRect(0, 0, 2000, 600)
         
-        # Background color
-        self.setBackgroundBrush(Qt.darkGray)
+        # Background color - white for visibility
+        self.setBackgroundBrush(QBrush(QColor("#F5F5F5")))
     
     def wheelEvent(self, event: QWheelEvent):
         """Handle mouse wheel for zooming.

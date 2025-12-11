@@ -44,14 +44,17 @@ class MainWindow(QMainWindow):
         from ui.pages.dashboard_page import DashboardPage
         from ui.pages.nodes_page import NodesPage
         from ui.pages.network_page import NetworkMapPage
+        from ui.pages.blockchain_page import BlockchainExplorerPage
         
         self.dashboard_page = DashboardPage(self.data_manager)
         self.nodes_page = NodesPage(self.data_manager)
         self.network_page = NetworkMapPage(self.data_manager)
+        self.blockchain_page = BlockchainExplorerPage(self.data_manager)
         
         self.tabs.addTab(self.dashboard_page, "📊 Dashboard")
         self.tabs.addTab(self.nodes_page, "🖥️ Nodes")
         self.tabs.addTab(self.network_page, "🗺️ Network Map")
+        self.tabs.addTab(self.blockchain_page, "⛓️ Blockchain")
         
         # Dock Widgets
         self._create_attack_panel_dock()
@@ -183,6 +186,7 @@ class MainWindow(QMainWindow):
             self.dashboard_page.clear_display()
             self.nodes_page.clear_display()
             self.network_page.clear_network()
+            self.blockchain_page.clear_display()
             self.metrics_widget.clear_display()
             self.attack_panel_widget.clear_active_attacks()
         else:
