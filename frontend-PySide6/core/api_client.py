@@ -133,13 +133,50 @@ class APIClient:
         target: Optional[str] = None,
         parameters: Optional[Dict] = None
     ) -> Dict:
-        """Trigger an attack."""
-        payload = {
-            "type": attack_type,
-            "target": target,
-            "parameters": parameters or {}
-        }
-        return self._request("POST", "/attack/trigger", json=payload)
+        """Trigger an attack with appropriate endpoint and payload."""
+        attack_type_lower = attack_type.lower()
+        
+        # Route to specific endpoints based on attack type
+        if attack_type_lower == "sybil":
+            # Sybil attack has its own endpoint
+            fake_node_count = parameters.get("fake_node_count", 10) if parameters else 10
+            return self._request(
+                "POST", 
+                f"/attack/sybil/trigger?num_nodes={fake_node_count}"
+            )
+        
+        elif attack_type_lower == "majority":
+            # Majority attack has its own endpoint
+            return self._request("POST", "/attack/majority/trigger")
+        
+        elif attack_type_lower == "partition":
+            # Network partition has its own endpoint
+            return self._request("POST", "/attack/partition/trigger")
+        
+        elif attack_type_lower == "selfish_mining":
+            # Selfish mining has its own endpoint
+            attacker_id = parameters.get("attacker_id") if parameters else target
+            if not attacker_id:
+                return {"error": "Selfish mining requires attacker_id"}
+            return self._request(
+                "POST",
+                f"/attack/selfish/trigger?target_node_id={attacker_id}"
+            )
+        
+        elif attack_type_lower in ["ddos", "byzantine"]:
+            # DDoS and Byzantine use the generic trigger endpoint
+            if not target:
+                return {"error": f"{attack_type} attack requires target"}
+            
+            payload = {
+                "attack_type": attack_type_lower,
+                "target_node_id": target,
+                "parameters": parameters or {}
+            }
+            return self._request("POST", "/attack/trigger", json=payload)
+        
+        else:
+            return {"error": f"Unknown attack type: {attack_type}"}
     
     def stop_attack(self, attack_id: str) -> Dict:
         """Stop an active attack."""
