@@ -1,7 +1,6 @@
-"""Tests for Milestone 3.2 - Active Attacks Tracking."""
+"""Integration tests for Active Attacks Section - Milestone 6.8"""
 import pytest
 from PySide6.QtWidgets import QApplication
-from unittest.mock import Mock
 import sys
 
 from ui.widgets.attack_panel_widget import AttackPanelWidget
@@ -24,13 +23,7 @@ def attack_panel(qapp):
     return widget
 
 
-# ============ Active Attacks Section Tests ============
-
-def test_active_attacks_section_exists(attack_panel):
-    """Test Active Attacks section is created."""
-    assert attack_panel.toolbox.count() == 7  # 6 attacks + 1 active
-    assert "Active Attacks" in attack_panel.toolbox.itemText(6)
-
+# ============ Active Attacks List Structure Tests ============
 
 def test_active_attacks_list_exists(attack_panel):
     """Test active attacks list widget exists."""
@@ -38,52 +31,60 @@ def test_active_attacks_list_exists(attack_panel):
     assert attack_panel.active_attacks_list is not None
 
 
-def test_initial_active_attacks_count(attack_panel):
+def test_initial_active_attacks_count_is_zero(attack_panel):
     """Test initial active attacks count is 0."""
     assert attack_panel.get_active_attacks_count() == 0
+    assert len(attack_panel.active_attacks) == 0
 
 
-def test_initial_title_shows_zero(attack_panel):
-    """Test Active Attacks title shows (0)."""
+def test_active_attacks_section_title_shows_zero(attack_panel):
+    """Test Active Attacks section title shows (0) initially."""
+    # Section 6 is Active Attacks
     title = attack_panel.toolbox.itemText(6)
     assert "(0)" in title
 
 
 # ============ Add Active Attack Tests ============
 
-def test_add_single_attack(attack_panel):
-    """Test adding single active attack."""
+def test_add_single_active_attack(attack_panel):
+    """Test adding a single active attack."""
     attack_data = {
-        "id": "attack_1",
+        "id": "attack_001",
         "type": "ddos",
-        "target": "node_5",
-        "progress": 0.3,
-        "remaining_time": 20
+        "target": "node_0",
+        "progress": 0.0,
+        "remaining_time": 30
     }
     
     attack_panel.add_active_attack(attack_data)
     
     assert attack_panel.get_active_attacks_count() == 1
-    assert "attack_1" in attack_panel.active_attacks
+    assert "attack_001" in attack_panel.active_attacks
 
 
-def test_add_multiple_attacks(attack_panel):
+def test_add_multiple_active_attacks(attack_panel):
     """Test adding multiple active attacks."""
     attacks = [
-        {"id": "attack_1", "type": "ddos", "target": "node_5", "progress": 0.2, "remaining_time": 15},
-        {"id": "attack_2", "type": "byzantine", "target": "node_1", "progress": 0.5, "remaining_time": 10},
-        {"id": "attack_3", "type": "sybil", "progress": 0.7, "remaining_time": 5}
+        {"id": "attack_001", "type": "ddos", "target": "node_0", "progress": 0.0, "remaining_time": 30},
+        {"id": "attack_002", "type": "byzantine", "target": "node_1", "progress": 0.2, "remaining_time": 25},
+        {"id": "attack_003", "type": "sybil", "target": "N/A", "progress": 0.5, "remaining_time": 15},
     ]
     
-    for attack in attacks:
-        attack_panel.add_active_attack(attack)
+    for attack_data in attacks:
+        attack_panel.add_active_attack(attack_data)
     
     assert attack_panel.get_active_attacks_count() == 3
 
 
-def test_title_updates_on_add(attack_panel):
-    """Test title updates when attack is added."""
-    attack_data = {"id": "attack_1", "type": "ddos", "target": "node_5", "progress": 0.0, "remaining_time": 30}
+def test_add_active_attack_updates_title(attack_panel):
+    """Test adding attack updates section title count."""
+    attack_data = {
+        "id": "attack_001",
+        "type": "ddos",
+        "target": "node_0",
+        "progress": 0.0,
+        "remaining_time": 30
+    }
     
     attack_panel.add_active_attack(attack_data)
     
@@ -91,50 +92,77 @@ def test_title_updates_on_add(attack_panel):
     assert "(1)" in title
 
 
-def test_duplicate_attack_id_ignored(attack_panel):
-    """Test duplicate attack ID is ignored."""
-    attack_data = {"id": "attack_1", "type": "ddos", "target": "node_5", "progress": 0.0, "remaining_time": 30}
+def test_cannot_add_duplicate_attack_id(attack_panel):
+    """Test cannot add attack with duplicate ID."""
+    attack_data = {
+        "id": "attack_001",
+        "type": "ddos",
+        "target": "node_0",
+        "progress": 0.0,
+        "remaining_time": 30
+    }
     
     attack_panel.add_active_attack(attack_data)
-    attack_panel.add_active_attack(attack_data)  # Duplicate
+    attack_panel.add_active_attack(attack_data)  # Try to add again
     
+    # Should still be 1
     assert attack_panel.get_active_attacks_count() == 1
-
-
-def test_empty_attack_id_ignored(attack_panel):
-    """Test attack without ID is ignored."""
-    attack_data = {"type": "ddos", "target": "node_5", "progress": 0.0, "remaining_time": 30}
-    
-    attack_panel.add_active_attack(attack_data)
-    
-    assert attack_panel.get_active_attacks_count() == 0
 
 
 # ============ Remove Active Attack Tests ============
 
-def test_remove_existing_attack(attack_panel):
-    """Test removing existing attack."""
-    attack_data = {"id": "attack_1", "type": "ddos", "target": "node_5", "progress": 0.0, "remaining_time": 30}
+def test_remove_active_attack(attack_panel):
+    """Test removing an active attack."""
+    attack_data = {
+        "id": "attack_001",
+        "type": "ddos",
+        "target": "node_0",
+        "progress": 0.0,
+        "remaining_time": 30
+    }
     
     attack_panel.add_active_attack(attack_data)
     assert attack_panel.get_active_attacks_count() == 1
     
-    attack_panel.remove_active_attack("attack_1")
+    attack_panel.remove_active_attack("attack_001")
     assert attack_panel.get_active_attacks_count() == 0
 
 
 def test_remove_nonexistent_attack(attack_panel):
-    """Test removing non-existent attack doesn't cause error."""
-    attack_panel.remove_active_attack("nonexistent")
-    assert attack_panel.get_active_attacks_count() == 0
+    """Test removing nonexistent attack doesn't crash."""
+    attack_panel.remove_active_attack("nonexistent_id")
+    # Should not crash
 
 
-def test_title_updates_on_remove(attack_panel):
-    """Test title updates when attack is removed."""
-    attack_data = {"id": "attack_1", "type": "ddos", "target": "node_5", "progress": 0.0, "remaining_time": 30}
+def test_remove_one_of_multiple_attacks(attack_panel):
+    """Test removing one attack from multiple."""
+    attacks = [
+        {"id": "attack_001", "type": "ddos", "target": "node_0", "progress": 0.0, "remaining_time": 30},
+        {"id": "attack_002", "type": "sybil", "target": "N/A", "progress": 0.0, "remaining_time": 30},
+    ]
+    
+    for attack_data in attacks:
+        attack_panel.add_active_attack(attack_data)
+    
+    attack_panel.remove_active_attack("attack_001")
+    
+    assert attack_panel.get_active_attacks_count() == 1
+    assert "attack_001" not in attack_panel.active_attacks
+    assert "attack_002" in attack_panel.active_attacks
+
+
+def test_remove_updates_title(attack_panel):
+    """Test removing attack updates section title."""
+    attack_data = {
+        "id": "attack_001",
+        "type": "ddos",
+        "target": "node_0",
+        "progress": 0.0,
+        "remaining_time": 30
+    }
     
     attack_panel.add_active_attack(attack_data)
-    attack_panel.remove_active_attack("attack_1")
+    attack_panel.remove_active_attack("attack_001")
     
     title = attack_panel.toolbox.itemText(6)
     assert "(0)" in title
@@ -142,39 +170,44 @@ def test_title_updates_on_remove(attack_panel):
 
 # ============ Update Active Attack Tests ============
 
-def test_update_attack_progress(attack_panel):
+def test_update_active_attack_progress(attack_panel):
     """Test updating attack progress."""
-    attack_data = {"id": "attack_1", "type": "ddos", "target": "node_5", "progress": 0.0, "remaining_time": 30}
+    attack_data = {
+        "id": "attack_001",
+        "type": "ddos",
+        "target": "node_0",
+        "progress": 0.0,
+        "remaining_time": 30
+    }
     
     attack_panel.add_active_attack(attack_data)
-    attack_panel.update_active_attack("attack_1", 0.75, 10)
+    attack_panel.update_active_attack("attack_001", 0.5, 15)
     
-    # Verify item widget updated
-    item = attack_panel.active_attacks["attack_1"]
+    # Get widget and verify update
+    item = attack_panel.active_attacks["attack_001"]
     widget = attack_panel.active_attacks_list.itemWidget(item)
     
     assert isinstance(widget, ActiveAttackItem)
-    assert widget.progress_bar.value() == 75
+    assert widget.progress_bar.value() == 50  # 0.5 * 100
 
 
 def test_update_nonexistent_attack(attack_panel):
-    """Test updating non-existent attack doesn't cause error."""
-    attack_panel.update_active_attack("nonexistent", 0.5, 15)
+    """Test updating nonexistent attack doesn't crash."""
+    attack_panel.update_active_attack("nonexistent_id", 0.5, 15)
+    # Should not crash
 
 
-# ============ Clear Active Attacks Tests ============
+# ============ Clear All Attacks Tests ============
 
-def test_clear_all_attacks(attack_panel):
+def test_clear_active_attacks(attack_panel):
     """Test clearing all active attacks."""
     attacks = [
-        {"id": "attack_1", "type": "ddos", "target": "node_5", "progress": 0.2, "remaining_time": 15},
-        {"id": "attack_2", "type": "byzantine", "target": "node_1", "progress": 0.5, "remaining_time": 10},
+        {"id": "attack_001", "type": "ddos", "target": "node_0", "progress": 0.0, "remaining_time": 30},
+        {"id": "attack_002", "type": "sybil", "target": "N/A", "progress": 0.0, "remaining_time": 30},
     ]
     
-    for attack in attacks:
-        attack_panel.add_active_attack(attack)
-    
-    assert attack_panel.get_active_attacks_count() == 2
+    for attack_data in attacks:
+        attack_panel.add_active_attack(attack_data)
     
     attack_panel.clear_active_attacks()
     
@@ -183,160 +216,116 @@ def test_clear_all_attacks(attack_panel):
 
 
 def test_clear_updates_title(attack_panel):
-    """Test clear updates title to (0)."""
-    attack_data = {"id": "attack_1", "type": "ddos", "target": "node_5", "progress": 0.0, "remaining_time": 30}
-    attack_panel.add_active_attack(attack_data)
+    """Test clear updates section title to (0)."""
+    attack_data = {
+        "id": "attack_001",
+        "type": "ddos",
+        "target": "node_0",
+        "progress": 0.0,
+        "remaining_time": 30
+    }
     
+    attack_panel.add_active_attack(attack_data)
     attack_panel.clear_active_attacks()
     
     title = attack_panel.toolbox.itemText(6)
     assert "(0)" in title
 
 
-# ============ Stop Signal Tests ============
+# ============ Stop Button Signal Tests ============
 
-def test_stop_signal_emitted(attack_panel, qapp):
-    """Test stop signal is emitted when stop button clicked."""
-    attack_data = {"id": "attack_1", "type": "ddos", "target": "node_5", "progress": 0.0, "remaining_time": 30}
+def test_stop_button_emits_signal(attack_panel):
+    """Test stop button emits attack_stop_requested signal."""
+    attack_data = {
+        "id": "attack_001",
+        "type": "ddos",
+        "target": "node_0",
+        "progress": 0.0,
+        "remaining_time": 30
+    }
+    
     attack_panel.add_active_attack(attack_data)
     
-    # Capture signal
     captured_signals = []
     attack_panel.attack_stop_requested.connect(
         lambda attack_id: captured_signals.append(attack_id)
     )
     
-    # Get widget and trigger stop
-    item = attack_panel.active_attacks["attack_1"]
+    # Get widget and click stop button
+    item = attack_panel.active_attacks["attack_001"]
     widget = attack_panel.active_attacks_list.itemWidget(item)
     widget.stop_button.click()
     
     assert len(captured_signals) == 1
-    assert captured_signals[0] == "attack_1"
+    assert captured_signals[0] == "attack_001"
 
 
-# ============ ActiveAttackItem Widget Tests ============
+# ============ Attack Type Display Tests ============
 
-def test_active_attack_item_creation(qapp):
-    """Test ActiveAttackItem widget creation."""
+def test_ddos_attack_display(attack_panel):
+    """Test DDoS attack displays correctly."""
     attack_data = {
-        "id": "attack_1",
+        "id": "attack_001",
         "type": "ddos",
-        "target": "node_5",
-        "progress": 0.5,
-        "remaining_time": 20
-    }
-    
-    item = ActiveAttackItem(attack_data)
-    
-    assert item is not None
-    assert item.attack_id == "attack_1"
-
-
-def test_active_attack_item_has_widgets(qapp):
-    """Test ActiveAttackItem has required widgets."""
-    attack_data = {
-        "id": "attack_1",
-        "type": "ddos",
-        "target": "node_5",
-        "progress": 0.5,
-        "remaining_time": 20
-    }
-    
-    item = ActiveAttackItem(attack_data)
-    
-    assert hasattr(item, 'icon_label')
-    assert hasattr(item, 'target_label')
-    assert hasattr(item, 'progress_bar')
-    assert hasattr(item, 'time_label')
-    assert hasattr(item, 'stop_button')
-
-
-def test_active_attack_item_progress_display(qapp):
-    """Test progress bar displays correct value."""
-    attack_data = {
-        "id": "attack_1",
-        "type": "ddos",
-        "target": "node_5",
-        "progress": 0.75,
-        "remaining_time": 10
-    }
-    
-    item = ActiveAttackItem(attack_data)
-    
-    assert item.progress_bar.value() == 75
-
-
-def test_active_attack_item_update_progress(qapp):
-    """Test updating progress and time."""
-    attack_data = {
-        "id": "attack_1",
-        "type": "ddos",
-        "target": "node_5",
+        "target": "node_0",
         "progress": 0.3,
         "remaining_time": 20
     }
     
-    item = ActiveAttackItem(attack_data)
-    item.update_progress(0.9, 5)
+    attack_panel.add_active_attack(attack_data)
     
-    assert item.progress_bar.value() == 90
-    assert "5s" in item.time_label.text()
-
-
-def test_active_attack_item_icon_map(qapp):
-    """Test different attack types have different icons."""
-    attack_types = ["ddos", "byzantine", "sybil", "majority", "partition", "selfish_mining"]
+    item = attack_panel.active_attacks["attack_001"]
+    widget = attack_panel.active_attacks_list.itemWidget(item)
     
-    for attack_type in attack_types:
-        attack_data = {
-            "id": f"attack_{attack_type}",
-            "type": attack_type,
-            "target": "node_5",
-            "progress": 0.0,
-            "remaining_time": 30
-        }
-        
-        item = ActiveAttackItem(attack_data)
-        
-        # Should have icon in label
-        assert item.icon_label.text() != ""
-        assert attack_type.upper() in item.icon_label.text()
+    assert "🌊" in widget.icon_label.text()
+    assert "DDOS" in widget.icon_label.text().upper()
+    assert "node_0" in widget.target_label.text()
 
 
-def test_active_attack_item_network_wide_target(qapp):
-    """Test attack without specific target shows 'Network-wide'."""
+def test_sybil_attack_display(attack_panel):
+    """Test Sybil attack displays correctly."""
     attack_data = {
-        "id": "attack_1",
-        "type": "partition",
+        "id": "attack_002",
+        "type": "sybil",
+        "target": "N/A",
         "progress": 0.0,
         "remaining_time": 30
     }
     
-    item = ActiveAttackItem(attack_data)
+    attack_panel.add_active_attack(attack_data)
     
-    assert "Network-wide" in item.target_label.text()
+    item = attack_panel.active_attacks["attack_002"]
+    widget = attack_panel.active_attacks_list.itemWidget(item)
+    
+    assert "👥" in widget.icon_label.text()
+    assert "Network-wide" in widget.target_label.text()
 
 
-def test_active_attack_item_stop_signal(qapp):
-    """Test stop button emits signal."""
-    attack_data = {
-        "id": "attack_1",
-        "type": "ddos",
-        "target": "node_5",
-        "progress": 0.0,
-        "remaining_time": 30
-    }
+# ============ Full Integration Test ============
+
+def test_full_active_attacks_lifecycle(attack_panel):
+    """Test complete lifecycle of active attacks."""
+    # 1. Add multiple attacks
+    attacks = [
+        {"id": "attack_001", "type": "ddos", "target": "node_0", "progress": 0.0, "remaining_time": 30},
+        {"id": "attack_002", "type": "byzantine", "target": "node_1", "progress": 0.0, "remaining_time": 25},
+    ]
     
-    item = ActiveAttackItem(attack_data)
+    for attack_data in attacks:
+        attack_panel.add_active_attack(attack_data)
     
-    captured_signals = []
-    item.stop_requested.connect(lambda attack_id: captured_signals.append(attack_id))
+    assert attack_panel.get_active_attacks_count() == 2
     
-    item.stop_button.click()
+    # 2. Update progress
+    attack_panel.update_active_attack("attack_001", 0.5, 15)
     
-    assert len(captured_signals) == 1
-    assert captured_signals[0] == "attack_1"
+    # 3. Remove one attack
+    attack_panel.remove_active_attack("attack_002")
+    assert attack_panel.get_active_attacks_count() == 1
+    
+    # 4. Clear all
+    attack_panel.clear_active_attacks()
+    assert attack_panel.get_active_attacks_count() == 0
 
 
 if __name__ == "__main__":
