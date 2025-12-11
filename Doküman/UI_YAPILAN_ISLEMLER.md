@@ -660,9 +660,333 @@ hoverLeaveEvent() → setPen(original)
 
 ---
 
-## Sonraki: Milestone-5
+## Milestone-6: Attack Control Panel ✅
+
+### 6.1 Attack Panel Widget - Temel Yapı ✅
+**Tarih:** Yirminci adım
+**Dosyalar:**
+- `ui/widgets/attack_panel_widget.py` - AttackPanelWidget sınıfı
+- `tests/test_attack_panel_widget.py` - 24 test PASSED
+
+**Özellikler:**
+- QToolBox ile 7 section (6 attack + 1 active)
+- QDockWidget içeriği (sol dock)
+- Signal: `attack_triggered(str, dict)` - attack type + params
+- Signal: `attack_stop_requested(str)` - attack ID
+- `update_node_list(nodes)` - Dropdown güncellemesi
+
+**QToolBox Sections:**
+```
+🌊 DDoS Attack
+⚔️ Byzantine Attack
+👥 Sybil Attack
+⚡ Majority Attack (51%)
+🔌 Network Partition
+💎 Selfish Mining
+⚠️ Active Attacks (0)
+```
+
+---
+
+### 6.2 DDoS Attack Panel ✅
+**Tarih:** Yirmi birinci adım
+**Dosyalar:**
+- `tests/test_attack_panel_ddos_integration.py` - 18 test PASSED
+
+**Özellikler:**
+- Target dropdown (tüm node'lar)
+- Intensity slider (1-10, default: 5)
+- Intensity label (real-time güncelleme)
+- Trigger button
+- Parameter validation (target seçilmeli)
+- Params: `{target: str, intensity: int}`
+
+**Test Kapsamı:**
+- Widget yapısı (dropdown, slider, label)
+- Parameter validation
+- Signal emission
+- API format uyumluluğu
+- Intensity range (1-10)
+- Full attack flow
+
+---
+
+### 6.3 Byzantine Attack Panel ✅
+**Tarih:** Yirmi ikinci adım
+**Dosyalar:**
+- `tests/test_attack_panel_byzantine_integration.py` - 18 test PASSED
+
+**Özellikler:**
+- Target dropdown (sadece validators)
+- Validator filtering (is_validator=True)
+- Warning label
+- Trigger button
+- Parameter validation (validator seçilmeli)
+- Params: `{target: str}`
+
+**Test Kapsamı:**
+- Validator filtering (regular node'lar görünmez)
+- Target validation
+- Mixed node list handling
+- Edge cases (hiç validator yok, hepsi validator)
+- Selection preservation
+
+---
+
+### 6.4 Sybil Attack Panel ✅
+**Tarih:** Yirmi üçüncü adım
+**Dosyalar:**
+- `tests/test_attack_panel_sybil_integration.py` - 18 test PASSED
+
+**Özellikler:**
+- Fake nodes count slider (5-50, default: 10)
+- Count label (real-time güncelleme)
+- Trigger button
+- No validation required (her zaman tetiklenebilir)
+- Params: `{fake_node_count: int}`
+
+**Test Kapsamı:**
+- Slider range (5-50)
+- Default value (10)
+- Label updates
+- Multiple triggers (farklı değerlerle)
+- Boundary values
+
+---
+
+### 6.5 Majority Attack Panel ✅
+**Tarih:** Yirmi dördüncü adım
+**Dosyalar:**
+- `tests/test_attack_panel_majority_integration.py` - 6 test PASSED
+
+**Özellikler:**
+- Warning label (51% validators compromise)
+- Trigger button (kırmızı stil)
+- No parameters
+- Params: `{}`
+
+**Test Kapsamı:**
+- Empty params dict
+- Attack type: "majority"
+- Multiple triggers
+
+---
+
+### 6.6 Network Partition Panel ✅
+**Tarih:** Yirmi beşinci adım
+**Dosyalar:**
+- `tests/test_attack_panel_partition_integration.py` - 6 test PASSED
+
+**Özellikler:**
+- Info label (network split açıklaması)
+- Trigger button
+- No parameters
+- Params: `{}`
+
+**Test Kapsamı:**
+- Empty params dict
+- Attack type: "partition"
+
+---
+
+### 6.7 Selfish Mining Panel ✅
+**Tarih:** Yirmi altıncı adım
+**Dosyalar:**
+- `tests/test_attack_panel_selfish_integration.py` - 14 test PASSED
+
+**Özellikler:**
+- Attacker dropdown (tüm node'lar)
+- Info label
+- Trigger button
+- Parameter validation (attacker seçilmeli)
+- Params: `{attacker_id: str}`
+
+**Test Kapsamı:**
+- Dropdown population (validators + regular)
+- Attacker validation
+- Selection preservation
+
+---
+
+### 6.8 Active Attacks Section ✅
+**Tarih:** Yirmi yedinci adım
+**Dosyalar:**
+- `ui/widgets/active_attack_item.py` - ActiveAttackItem widget
+- `tests/test_attack_panel_active_attacks.py` - 22 test PASSED
+
+**Özellikler:**
+- QListWidget ile active attacks listesi
+- Custom ActiveAttackItem widget:
+  - Attack icon + type + target
+  - Progress bar (0-100%)
+  - Remaining time label
+  - Stop button (kırmızı)
+- `add_active_attack(attack_data)`
+- `remove_active_attack(attack_id)`
+- `update_active_attack(attack_id, progress, remaining_time)`
+- `clear_active_attacks()`
+- `get_active_attacks_count()`
+- Section title dinamik: "⚠️ Active Attacks (N)"
+- Signal: `stop_requested(str)` → `attack_stop_requested`
+
+**ActiveAttackItem Widget:**
+```
+┌───────────────────────────┐
+│ 🌊 DDOS on node_5         │ ← Icon + Type + Target
+│ [████████░░] 80%          │ ← Progress bar
+│ Remaining: 4s   [Stop]    │ ← Time + Stop button
+└───────────────────────────┘
+```
+
+**Test Kapsamı:**
+- Add/remove/update/clear attacks
+- Multiple attacks desteği
+- Duplicate ID handling
+- Stop button signal
+- Title güncelleme
+- Attack type display
+- Full lifecycle test
+
+---
+
+### 6.9 API Integration ✅
+**Tarih:** Yirmi sekizinci adım
+**Dosyalar:**
+- `ui/main_window.py` (güncellendi)
+- `tests/test_attack_panel_api_integration.py` - 15 test PASSED
+
+**Özellikler:**
+- MainWindow signal bağlantıları:
+  - `attack_triggered` → `_on_attack_triggered()` → API call
+  - `attack_stop_requested` → `_on_attack_stop_requested()` → API call
+  - `nodes_updated` → `update_node_list()`
+- Attack trigger flow:
+  - `api_client.trigger_attack(type, target, params)`
+  - Success: `add_active_attack()` ile UI'a ekle
+  - Failure: Status bar'da hata mesajı
+- Attack stop flow:
+  - `api_client.stop_attack(attack_id)`
+  - Success: `remove_active_attack()`
+  - Failure: Hata mesajı
+- Error handling (connection failures)
+
+**API Call Format:**
+```python
+# DDoS
+trigger_attack("ddos", "node_0", {"target": "node_0", "intensity": 7})
+
+# Byzantine
+trigger_attack("byzantine", "validator_1", {"target": "validator_1"})
+
+# Sybil
+trigger_attack("sybil", None, {"fake_node_count": 20})
+
+# Majority/Partition
+trigger_attack("majority", None, {})
+
+# Selfish Mining
+trigger_attack("selfish_mining", None, {"attacker_id": "miner_0"})
+
+# Stop
+stop_attack("attack_123")
+```
+
+**Test Kapsamı:**
+- Tüm attack tiplerinin API formatı
+- Mock API client ile entegrasyon
+- Stop attack signal
+- Error handling simulation
+- Multiple attacks
+
+---
+
+## Milestone-6 Özet
+
+**Tamamlanan Testler:** 141 PASSED
+- test_attack_panel_widget.py: 24
+- test_attack_panel_ddos_integration.py: 18
+- test_attack_panel_byzantine_integration.py: 18
+- test_attack_panel_sybil_integration.py: 18
+- test_attack_panel_majority_integration.py: 6
+- test_attack_panel_partition_integration.py: 6
+- test_attack_panel_selfish_integration.py: 14
+- test_attack_panel_active_attacks.py: 22
+- test_attack_panel_api_integration.py: 15
+
+**Çalışan Özellikler:**
+- ✅ Attack Control Panel (Left Dock)
+- ✅ QToolBox navigation (7 sections)
+- ✅ 6 attack types:
+  - DDoS (target + intensity)
+  - Byzantine (validator-only)
+  - Sybil (fake node count)
+  - Majority (51%)
+  - Network Partition
+  - Selfish Mining (attacker)
+- ✅ Parameter validation
+- ✅ Dynamic node dropdowns (validator filtering)
+- ✅ Active attacks tracking (real-time)
+- ✅ Progress bar + remaining time
+- ✅ Stop attack functionality
+- ✅ API integration (trigger & stop)
+- ✅ Error handling
+- ✅ MainWindow entegrasyonu
+
+**Dosya Yapısı Güncellemesi:**
+```
+frontend-PySide6/
+├── ui/
+│   ├── widgets/
+│   │   ├── attack_panel_widget.py      ← YENİ
+│   │   ├── active_attack_item.py       ← YENİ
+│   │   ├── metrics_widget.py
+│   │   ├── node_status_card.py
+│   │   └── network_graph_widget.py
+│   ├── main_window.py (güncellendi)
+│   └── pages/
+├── tests/
+│   ├── test_attack_panel_widget.py                  ← YENİ
+│   ├── test_attack_panel_ddos_integration.py        ← YENİ
+│   ├── test_attack_panel_byzantine_integration.py   ← YENİ
+│   ├── test_attack_panel_sybil_integration.py       ← YENİ
+│   ├── test_attack_panel_majority_integration.py    ← YENİ
+│   ├── test_attack_panel_partition_integration.py   ← YENİ
+│   ├── test_attack_panel_selfish_integration.py     ← YENİ
+│   ├── test_attack_panel_active_attacks.py          ← YENİ
+│   ├── test_attack_panel_api_integration.py         ← YENİ
+│   └── ...
+```
+
+**Signal Flow:**
+```
+Attack Trigger:
+  User clicks "Trigger Attack"
+    → attack_panel_widget.attack_triggered(type, params)
+    → MainWindow._on_attack_triggered()
+    → api_client.trigger_attack(type, target, params)
+    → Backend returns {attack_id, duration}
+    → attack_panel_widget.add_active_attack()
+
+Attack Stop:
+  User clicks "Stop" button
+    → active_attack_item.stop_requested(attack_id)
+    → attack_panel_widget.attack_stop_requested(attack_id)
+    → MainWindow._on_attack_stop_requested()
+    → api_client.stop_attack(attack_id)
+    → attack_panel_widget.remove_active_attack(attack_id)
+
+Node List Update:
+  DataManager.nodes_updated(nodes)
+    → attack_panel_widget.update_node_list(nodes)
+    → Dropdown'lar güncellenir (validator filtering)
+```
+
+---
+
+## Sonraki: Milestone-7
 
 **Plan:**
+- Blockchain Explorer Page
 - PBFT Status & Messages (Bottom Dock)
 
 ---
