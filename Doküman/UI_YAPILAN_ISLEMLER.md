@@ -983,11 +983,314 @@ Node List Update:
 
 ---
 
-## Sonraki: Milestone-7
+## Milestone-7: Metrics Dashboard ve Real-time Updates ✅
+
+### 7.1 Metrics Widget - Temel Yapı ✅
+**Tarih:** Otuz birinci adım
+**Dosyalar:**
+- `ui/widgets/metrics_widget.py` - MetricsWidget (zaten mevcut, doğrulandı)
+- `tests/test_metrics_widget.py` - Mevcut testler
+
+**Özellikler:**
+- QScrollArea + QVBoxLayout yapısı
+- QDockWidget içeriği (Right side)
+- 4 ana section: Graph, Cards, Health, Metrics
+- DataManager integration
+
+---
+
+### 7.2 Real-time Graph ✅
+**Tarih:** Otuz ikinci adım
+**Dosyalar:**
+- `tests/test_metrics_graph.py` - 27 test PASSED
+
+**Özellikler:**
+- PyQtGraph PlotWidget (250px yükseklik)
+- Multi-curve support (10 farklı renk)
+- Response time grafiği
+- Auto-scroll (son 50 data point)
+- Legend ve grid
+- Dark theme (#2D2D2D background)
+- Real-time güncelleme
+
+**Test Kapsamı:**
+- PlotWidget konfigürasyonu
+- Data structures (response_time_data, graph_curves)
+- Single/multiple node updates
+- Sequential updates (data point ekleme)
+- Buffer limit (50 max points)
+- Auto-scroll mechanism
+- Curve colors (10 renk cycling)
+- Empty/missing data handling
+- Performance (100+ updates)
+
+---
+
+### 7.3 Node Status Cards ✅
+**Tarih:** Otuz üçüncü adım
+**Dosyalar:**
+- `ui/widgets/node_status_card.py` - NodeStatusCard widget
+- `tests/test_node_status_card.py` - 40+ test PASSED
+
+**Özellikler:**
+- Custom QFrame widget
+- Status icons: 🟢 (healthy), 🔴 (under_attack), 🟡 (recovering), ⚪ (unknown)
+- Response time label (RT: Xms)
+- Trust score/Balance progress bar
+- Dynamic border color (status bazlı)
+- Hover effect
+- 150-200px width
+- 2-column grid layout
+
+**Widget İçeriği:**
+```
+┌─────────────────┐
+│ 🟢 node_0      │ ← Status + ID
+│ RT: 50ms       │ ← Response time
+│ Trust: █████░  │ ← Progress bar (0-100)
+│      95        │ ← Numeric value
+└─────────────────┘
+```
+
+**Test Kapsamı:**
+- Card creation & styling
+- Status icons (healthy, under_attack, recovering, unknown)
+- Validator trust score display
+- Regular node balance display
+- Border color changes
+- Progress bar color matching
+- Multiple updates
+- High balance scaling
+- Font styling
+
+---
+
+### 7.4 Network Health Bars ✅
+**Tarih:** Otuz dördüncü adım
+**Dosyalar:**
+- `tests/test_health_bars.py` - 32 test PASSED
+
+**Özellikler:**
+- 3 QProgressBar (Overall, Validators, Regular)
+- 0-100 range
+- %p% format gösterimi
+- Health hesaplama: `(healthy_nodes / total_nodes) * 100`
+- Color coding:
+  - QProgressBar chunk: #4CAF50 (yeşil)
+  - Background: #2D2D2D (dark)
+  - Border: #3D3D3D
+
+**Test Kapsamı:**
+- Bar creation & range
+- All healthy (100%)
+- Partial healthy (50%, 66%, etc.)
+- All under attack (0%)
+- Role-based health (validators vs regular)
+- Percentage rounding
+- Styling verification
+- Clear display reset
+
+---
+
+### 7.5 System Metrics ✅
+**Tarih:** Otuz beşinci adım
+**Dosyalar:**
+- `tests/test_system_metrics.py` - 27 test PASSED
+
+**Özellikler:**
+- 3 metric labels:
+  - Blocks/min (integer)
+  - TX/sec (float, 1 decimal)
+  - Avg Block Time (float, 1 decimal + "s" suffix)
+- Bold font styling (14px)
+- QGridLayout
+- Initial values: "0", "0.0", "0.0s"
+
+**Test Kapsamı:**
+- Label creation & initial values
+- Update all metrics
+- Zero/high values
+- Empty dict handling
+- Missing fields
+- Formatting precision (TX/sec, block time)
+- Clear display reset
+- Multiple updates
+
+---
+
+### 7.6 Real-time Updater (QThread) ✅
+**Tarih:** Otuz altıncı adım
+**Dosyalar:**
+- `core/updater.py` - DataUpdater (zaten mevcut, doğrulandı)
+- `tests/test_updater_thread.py` - 27 test PASSED
+
+**Özellikler:**
+- QThread inheritance
+- Polling loop (2000ms default interval)
+- Signals:
+  - `update_started` - Update başladı
+  - `update_completed` - Update tamamlandı
+  - `update_error(str)` - Hata oluştu
+- Methods:
+  - `start_updating()` - Thread başlat
+  - `stop_updating()` - Thread durdur (3s timeout)
+  - `set_interval(ms)` - Interval değiştir
+  - `is_updating()` - Running durumu
+- `data_manager.update_all_data()` çağrısı
+- Error recovery (devam eder)
+
+**Test Kapsamı:**
+- Thread creation & initial state
+- Start/stop mechanism
+- Signal emissions
+- Multiple update cycles
+- Interval management
+- Error handling & recovery
+- Thread safety
+- Cleanup on stop
+- Performance (rapid updates)
+
+---
+
+### 7.7 Data Flow Integration ✅
+**Tarih:** Otuz yedinci adım
+**Dosyalar:**
+- `ui/main_window.py` (doğrulandı)
+- `tests/test_data_flow_integration.py` - 34 test PASSED
+
+**Özellikler:**
+- MainWindow stores: `api_client`, `data_manager`, `updater`
+- DataManager → MetricsWidget bağlantısı
+- DataManager → All pages bağlantısı
+- Signal connections:
+  - `updater.update_completed` → `_on_update_completed()`
+  - `data_manager.connection_error` → `_on_connection_error()`
+  - `data_manager.nodes_updated` → `attack_panel.update_node_list()`
+  - `data_manager.nodes_updated` → `metrics_widget.update_health()`
+  - `attack_panel.attack_triggered` → `_on_attack_triggered()`
+  - `attack_panel.attack_stop_requested` → `_on_attack_stop_requested()`
+- Start button → `updater.start_updating()`
+- Stop button → `updater.stop_updating()`
+- Reset button → `updater.stop_updating()` + `data_manager.clear_cache()` + clear all pages
+- Window close → `updater.stop_updating()`
+
+**Test Kapsamı:**
+- Reference storage (api_client, data_manager, updater)
+- DataManager connections (MetricsWidget, all pages)
+- Signal connections verification
+- Start/Stop/Reset button functionality
+- Button states (enabled/disabled)
+- Status label updates
+- Connection error handling
+- Attack panel signal propagation
+- Metrics widget updates
+- All pages clear on reset
+- Tabs & dock widgets creation
+- Error handling (failed start, failed attack)
+
+**Signal Flow:**
+```
+DataUpdater (QThread, 2s interval)
+  → update_started signal
+  → data_manager.update_all_data()
+  → DataManager emits signals:
+      ├─ nodes_updated(list)
+      │   ├─> MetricsWidget.update_health()
+      │   ├─> MetricsWidget.update_response_time_graph()
+      │   ├─> MetricsWidget.update_status_cards()
+      │   ├─> AttackPanel.update_node_list()
+      │   ├─> NetworkPage.update_network()
+      │   └─> DashboardPage updates
+      ├─ metrics_updated(dict)
+      │   └─> MetricsWidget.update_metrics()
+      ├─ blockchain_updated(list)
+      ├─ pbft_updated(dict)
+      └─ status_updated(dict)
+  → update_completed signal
+      └─> MainWindow._on_update_completed()
+          └─> Update status label timestamp
+```
+
+---
+
+## Milestone-7 Özet
+
+**Tamamlanan Testler:** 187 PASSED
+- test_metrics_graph.py: 27
+- test_node_status_card.py: 40+
+- test_health_bars.py: 32
+- test_system_metrics.py: 27
+- test_updater_thread.py: 27
+- test_data_flow_integration.py: 34
+
+**Çalışan Özellikler:**
+- ✅ MetricsWidget (Right Dock)
+  - QScrollArea + QVBoxLayout
+  - 4 sections: Graph, Cards, Health, Metrics
+- ✅ Real-time Response Time Graph
+  - PyQtGraph PlotWidget
+  - Multi-curve (10 colors)
+  - Auto-scroll (50 points buffer)
+  - Legend & grid
+- ✅ Node Status Cards
+  - Custom QFrame widgets
+  - Status icons & colors
+  - Trust score / Balance display
+  - 2-column grid layout
+  - Hover effects
+- ✅ Network Health Bars
+  - Overall, Validators, Regular
+  - 0-100% progress bars
+  - Dynamic health calculation
+- ✅ System Metrics
+  - Blocks/min, TX/sec, Avg Block Time
+  - Real-time formatting
+- ✅ Real-time Updater (QThread)
+  - 2s polling interval
+  - Signal-based updates
+  - Error recovery
+  - Start/Stop mechanism
+- ✅ Data Flow Integration
+  - MainWindow orchestration
+  - Signal/Slot connections
+  - Button functionality
+  - Error handling
+
+**Dosya Yapısı Güncellemesi:**
+```
+frontend-PySide6/
+├── ui/
+│   ├── widgets/
+│   │   ├── metrics_widget.py (doğrulandı)
+│   │   └── node_status_card.py (doğrulandı)
+│   └── main_window.py (doğrulandı)
+├── core/
+│   └── updater.py (doğrulandı)
+└── tests/
+    ├── test_metrics_graph.py              ← YENİ (27)
+    ├── test_node_status_card.py           ← YENİ (40+)
+    ├── test_health_bars.py                ← YENİ (32)
+    ├── test_system_metrics.py             ← YENİ (27)
+    ├── test_updater_thread.py             ← YENİ (27)
+    └── test_data_flow_integration.py      ← YENİ (34)
+```
+
+**Önemli Implementation Detayları:**
+- PyQtGraph buffer limiti (50 points) performans için
+- NodeStatusCard dynamic border colors (status-based)
+- Health calculation: integer percentage
+- QThread proper cleanup (wait timeout)
+- Signal propagation: DataManager → All widgets
+- MainWindow button state management
+- Error handling tüm seviyelerde
+
+---
+
+## Sonraki: Milestone-8
 
 **Plan:**
-- Blockchain Explorer Page
-- PBFT Status & Messages (Bottom Dock)
+- PBFT Status & Message Traffic (Bottom Dock)
+- Blockchain Explorer Page updates
 
 ---
 
