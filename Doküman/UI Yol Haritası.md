@@ -17,7 +17,7 @@
 | M5: Blockchain Explorer | 4 gün | 0% | 🟠 Yüksek |
 | M6: Attack Panel | 3 gün | 0% | 🟡 Orta |
 | M7: Metrics & Real-time | 3 gün | 0% | 🟡 Orta |
-| M8: PBFT & Messages | 2 gün | 0% | 🟡 Orta |
+| M8: PBFT & Messages | 2 gün | 100% | ✅ Tamamlandı |
 | M9: Styling & Polish | 3 gün | 0% | 🟢 Düşük |
 | M10: Testing & Deploy | 3 gün | 0% | 🔴 Kritik |
 
@@ -528,44 +528,52 @@ PBFT consensus görünürlüğü ve mesaj trafiği gösterimi.
 ### Görevler
 
 #### 8.1 PBFT Widget
-- [ ] `ui/widgets/pbft_widget.py` - PBFTWidget
-  - [ ] QDockWidget içeriği (bottom)
-  - [ ] Layout yapısı
+- [x] `ui/widgets/pbft_widget.py` - PBFTWidget
+  - [x] QDockWidget içeriği (bottom)
+  - [x] Layout yapısı
+  - [x] Test: `test_pbft_widget.py` (24 tests passed)
 
 #### 8.2 PBFT Status Section
-- [ ] QGroupBox
-- [ ] Primary validator label
-- [ ] View number label
-- [ ] Consensus count label
-- [ ] Validators count label
-- [ ] Messages count label
-- [ ] Horizontal layout
-- [ ] Real-time güncelleme
+- [x] QGroupBox
+- [x] Primary validator label
+- [x] View number label
+- [x] Consensus count label
+- [x] Validators count label
+- [x] Messages count label
+- [x] Horizontal layout
+- [x] Real-time güncelleme
+- [x] MainWindow entegrasyonu
+- [x] Test: `test_main_window_pbft.py` (16 tests passed)
 
 #### 8.3 Message Traffic Table
-- [ ] QTableWidget
-  - [ ] Columns: Timestamp, Sender, Receiver, Type, View
-  - [ ] Alternate row colors
-  - [ ] Sorting enable
-  - [ ] Max 100 rows (performance)
-- [ ] Message type renk kodlama
-  - [ ] PRE_PREPARE: Mavi (#2196F3)
-  - [ ] PREPARE: Turuncu (#FF9800)
-  - [ ] COMMIT: Yeşil (#4CAF50)
-  - [ ] REPLY: Mor (#9C27B0)
-- [ ] Auto-scroll (en yeni üstte)
-- [ ] Cell styling
+- [x] QTableWidget
+  - [x] Columns: Timestamp, Sender, Receiver, Type, View
+  - [x] Alternate row colors
+  - [x] Sorting disabled (performance)
+  - [x] Max 100 rows (performance)
+- [x] Message type renk kodlama
+  - [x] PRE_PREPARE: Mavi (#2196F3)
+  - [x] PREPARE: Turuncu (#FF9800)
+  - [x] COMMIT: Yeşil (#4CAF50)
+  - [x] REPLY: Mor (#9C27B0)
+- [x] Auto-scroll (en yeni üstte)
+- [x] Cell styling
+- [x] Test: `test_message_traffic_table.py` (22 tests passed)
 
 #### 8.4 API Integration
-- [ ] PBFT status endpoint
-- [ ] Network messages endpoint
-- [ ] Real-time message updates
-- [ ] Message filtering (last 100)
+- [x] PBFT status endpoint (`get_pbft_status()`)
+- [x] Network messages endpoint (`get_network_messages(limit)`)
+- [x] Real-time message updates (signals: pbft_updated, messages_updated)
+- [x] Message filtering (last 100)
+- [x] Data transformation (DataManager: `fetch_pbft_status()`, `fetch_messages()`)
+- [x] Test: `test_pbft_api_integration.py` (17 tests passed)
 
 #### 8.5 Performance Optimization
-- [ ] Row limit enforcement
-- [ ] Efficient table updates
-- [ ] Memory cleanup
+- [x] Row limit enforcement (MAX_MESSAGES = 100)
+- [x] Efficient table updates (insertRow at top)
+- [x] Memory cleanup (clear_messages, clear_display)
+- [x] Oldest row auto-removal when limit exceeded
+- [x] Test: `test_pbft_performance.py` (13 tests)
 
 ### Çıktılar
 ✅ PBFT status display  
