@@ -47,28 +47,44 @@ class Simulator:
         total_nodes = self.config['total_nodes']
         validator_count = self.config['validator_nodes']
         
-        # Validator node'ları oluştur
-        for i in range(validator_count):
+        # İlk node'u oluştur ve genesis block'unu al
+        first_node = Node(
+            role="validator",
+            total_validators=validator_count,
+            message_broker=self.message_broker
+        )
+        first_node.id = f"node_0"
+        genesis_chain = first_node.blockchain.chain.copy()  # Genesis block'u kaydet
+        
+        self.nodes.append(first_node)
+        self.validator_nodes.append(first_node)
+        self.message_broker.register_node(first_node.id)
+        
+        # Diğer validator node'ları oluştur (aynı genesis ile)
+        for i in range(1, validator_count):
             node = Node(
                 role="validator",
                 total_validators=validator_count,
                 message_broker=self.message_broker
             )
-            node.id = f"node_{i}"  # PBFT primary selection için sabit ID
+            node.id = f"node_{i}"
+            node.blockchain.chain = genesis_chain.copy()  # Aynı genesis'i kullan
             self.nodes.append(node)
             self.validator_nodes.append(node)
             self.message_broker.register_node(node.id)
         
-        # Regular node'ları oluştur
+        # Regular node'ları oluştur (aynı genesis ile)
         regular_count = total_nodes - validator_count
         for i in range(regular_count):
             node = Node(role="regular", message_broker=self.message_broker)
+            node.blockchain.chain = genesis_chain.copy()  # Aynı genesis'i kullan
             self.nodes.append(node)
             self.regular_nodes.append(node)
             self.message_broker.register_node(node.id)
         
         print(f"✅ Initialized {total_nodes} nodes ({validator_count} validators, {regular_count} regular)")
         print(f"✅ MessageBroker configured with {len(self.message_broker.message_queues)} nodes")
+        print(f"✅ All nodes share genesis block: {genesis_chain[0].hash[:16]}...")
     
     async def auto_block_production(self):
         """
@@ -82,6 +98,9 @@ class Simulator:
             
             if not self.is_running:
                 break
+            
+            # Random transaction'lar oluştur
+            await self._generate_random_transactions()
             
             # Validator'lar için PBFT blok önerisi
             if self.validator_nodes:
@@ -129,6 +148,30 @@ class Simulator:
                         await validator.process_pbft_messages()
                     except Exception as e:
                         print(f"⚠️  Error processing PBFT messages for {validator.id}: {e}")
+    
+    async def _generate_random_transactions(self):
+        """
+        Random transaction'lar oluştur - blockchain'i aktif tutmak için
+        """
+        # Aktif node'lardan random seç
+        active_nodes = [n for n in self.nodes if n.is_active]
+        if len(active_nodes) < 2:
+            return
+        
+        # Her çalışmada 1-3 transaction oluştur
+        num_txs = random.randint(1, 3)
+        
+        for _ in range(num_txs):
+            sender = random.choice(active_nodes)
+            receiver = random.choice([n for n in active_nodes if n != sender])
+            amount = random.uniform(1.0, 10.0)
+            
+            # Transaction oluştur
+            tx = sender.create_transaction(receiver.wallet.address, amount)
+            if tx:
+                # Transaction'ı tüm node'ların pending listesine ekle
+                for node in active_nodes:
+                    node.blockchain.add_transaction(tx)
     
     async def broadcast_block(self, block, exclude_node=None):
         """

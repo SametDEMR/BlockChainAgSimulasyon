@@ -277,8 +277,16 @@ class Node:
         if consensus_reached:
             # Konsensüs sağlandı - trust score +2 (bonus)
             self.trust_score = min(100, self.trust_score + 2)
-            print(f"Node {self.id} reached CONSENSUS! (trust: {self.trust_score})")
-            # Burada blok zincire eklenir (şimdilik sadece log)
+            
+            # Bloğu zincire ekle - consensus sonrası
+            if len(self.blockchain.pending_transactions) >= 0:
+                block = self.blockchain.mine_pending_transactions(self.wallet.address)
+                if block:
+                    self.blocks_mined += 1
+                    self.total_earned += self.blockchain.mining_reward
+                    print(f"✅ Node {self.id} added block #{block.index} after CONSENSUS! (trust: {self.trust_score})")
+            else:
+                print(f"Node {self.id} reached CONSENSUS! (trust: {self.trust_score})")
     
     def mine_block(self):
         """
