@@ -36,9 +36,9 @@ def test_toolbox_exists(attack_panel):
     assert attack_panel.toolbox is not None
 
 
-def test_toolbox_has_six_sections(attack_panel):
-    """Test QToolBox has 6 attack sections."""
-    assert attack_panel.toolbox.count() == 6
+def test_toolbox_has_seven_sections(attack_panel):
+    """Test QToolBox has 7 sections (6 attack types + 1 active attacks)."""
+    assert attack_panel.toolbox.count() == 7
 
 
 def test_toolbox_section_titles(attack_panel):
@@ -49,7 +49,8 @@ def test_toolbox_section_titles(attack_panel):
         "👥 Sybil Attack",
         "⚡ Majority Attack (51%)",
         "🔌 Network Partition",
-        "💎 Selfish Mining"
+        "💎 Selfish Mining",
+        "⚠️ Active Attacks (0)"
     ]
     
     for i, expected in enumerate(expected_titles):
