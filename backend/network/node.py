@@ -383,6 +383,7 @@ class Node:
             'trust_score': self.trust_score,
             'is_byzantine': self.is_byzantine,
             'is_sybil': self.is_sybil,
+            "partition_group": getattr(self, 'partition_group', None),
             'balance': self.blockchain.get_balance(self.wallet.address),
             'chain_length': len(self.blockchain.chain),
             'pending_txs': len(self.blockchain.pending_transactions),

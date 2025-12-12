@@ -434,6 +434,19 @@ async def stop_partition_attack():
         "attack_status": network_partition.get_status()
     }
 
+@app.get("/network/partition-status")
+async def get_partition_status():
+    """Network partition durumunu döndür"""
+    if hasattr(simulator, 'message_broker'):
+        partition_info = simulator.message_broker.get_partition_status()
+        return {
+            "active": partition_info['active'],
+            "group_a_ids": list(network_partition.group_a_ids) if network_partition.partition_active else [],
+            "group_b_ids": list(network_partition.group_b_ids) if network_partition.partition_active else [],
+            "blocked_messages": partition_info.get('blocked_messages', 0)
+        }
+    return {"active": False, "group_a_ids": [], "group_b_ids": []}
+
 
 @app.post("/attack/selfish/trigger")
 async def trigger_selfish_mining_attack(target_node_id: str):

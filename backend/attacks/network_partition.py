@@ -50,15 +50,25 @@ class NetworkPartition:
         
         if total_nodes < 4:
             raise ValueError("Network partition için en az 4 node gerekli")
-        
+
         # Ağı ikiye böl
         mid_point = total_nodes // 2
         self.group_a = all_nodes[:mid_point]
         self.group_b = all_nodes[mid_point:]
-        
-        # ID setlerini oluştur (hızlı arama için)
+
+        # ID setlerini oluştur
         self.group_a_ids = {node.id for node in self.group_a}
         self.group_b_ids = {node.id for node in self.group_b}
+
+        # ✅ EKLE - Console'a yazdır
+        print("\n" + "=" * 60)
+        print("🔴 NETWORK PARTITION ATTACK")
+        print("=" * 60)
+        print(f"📊 Total nodes: {total_nodes}")
+        print(f"🔵 Group A ({len(self.group_a)} nodes): {[n.id for n in self.group_a]}")
+        print(f"🔴 Group B ({len(self.group_b)} nodes): {[n.id for n in self.group_b]}")
+        print(f"⚡ Groups isolated - parallel chains forming")
+        print("=" * 60 + "\n")
         
         # Partition line hesapla (görselleştirme için)
         self.partition_line = mid_point
@@ -191,9 +201,19 @@ class NetworkPartition:
         group_b_max_length = max([length for _, length in group_b_chains], default=0)
         
         # En uzun zinciri belirle
+        # En uzun zinciri belirle
         winner_group = "A" if group_a_max_length >= group_b_max_length else "B"
         winner_length = max(group_a_max_length, group_b_max_length)
         loser_length = min(group_a_max_length, group_b_max_length)
+
+        # ✅ EKLE - Merge sonucunu yazdır
+        print("\n" + "=" * 60)
+        print("🔗 PARTITION MERGE")
+        print("=" * 60)
+        print(f"🏆 Winner: Group {winner_group} (chain length: {winner_length})")
+        print(f"❌ Loser: Group {'B' if winner_group == 'A' else 'A'} (chain length: {loser_length})")
+        print(f"📦 {orphaned_blocks if 'orphaned_blocks' in locals() else 0} blocks orphaned")
+        print("=" * 60 + "\n")
         
         self.attack_engine.add_attack_effect(
             self.attack_id,

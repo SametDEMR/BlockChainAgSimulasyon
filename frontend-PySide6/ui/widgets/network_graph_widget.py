@@ -46,12 +46,12 @@ class NodeItem(QGraphicsEllipseItem):
         
         # Track hover state
         self._is_hovered = False
-    
+
     def update_style(self, node_data: Dict):
         """Update node style based on data"""
         self.node_data = node_data
-        
-        # Determine color based on node type and status
+
+        # Partition kontrolü KALDIRILDI
         if node_data.get('is_sybil', False):
             color = "#F44336"  # Red - Sybil
         elif node_data.get('is_byzantine', False):
@@ -62,7 +62,7 @@ class NodeItem(QGraphicsEllipseItem):
             color = "#2196F3"  # Blue - Validator
         else:
             color = "#4CAF50"  # Green - Regular
-        
+
         self.setBrush(QBrush(QColor(color)))
         
         # Update original pen based on selection
@@ -236,40 +236,6 @@ class NetworkGraphWidget(QGraphicsView):
         # Store positions
         self.node_positions = {node_id: (x * 2, y * 2) for node_id, (x, y) in pos.items()}
     
-    def _create_edges(self, nodes: List[Dict]):
-        """Create edge items between connected nodes"""
-        validators = [n['id'] for n in nodes if 'id' in n and n.get('role') == 'validator']
-        regulars = [n['id'] for n in nodes if 'id' in n and n.get('role') != 'validator']
-        
-        pen = QPen(QColor("#3D3D3D"), 1)
-        
-        # Connect validators
-        for i, v1 in enumerate(validators):
-            for v2 in validators[i+1:]:
-                if v1 in self.node_positions and v2 in self.node_positions:
-                    x1, y1 = self.node_positions[v1]
-                    x2, y2 = self.node_positions[v2]
-                    line = QGraphicsLineItem(x1, y1, x2, y2)
-                    line.setPen(pen)
-                    line.setZValue(-1)  # Behind nodes
-                    self.scene.addItem(line)
-                    self.edge_items.append(line)
-                    self.edge_connections[line] = (v1, v2)
-        
-        # Connect regulars to first validator
-        if validators:
-            v = validators[0]
-            for regular in regulars:
-                if v in self.node_positions and regular in self.node_positions:
-                    x1, y1 = self.node_positions[v]
-                    x2, y2 = self.node_positions[regular]
-                    line = QGraphicsLineItem(x1, y1, x2, y2)
-                    line.setPen(pen)
-                    line.setZValue(-1)
-                    self.scene.addItem(line)
-                    self.edge_items.append(line)
-                    self.edge_connections[line] = (v, regular)
-    
     def get_edges_for_node(self, node_id: str) -> List[QGraphicsLineItem]:
         """
         Get all edges connected to a specific node
@@ -386,3 +352,83 @@ class NetworkGraphWidget(QGraphicsView):
             self.node_double_clicked.emit(item.node_id)
         elif isinstance(item, QGraphicsTextItem) and hasattr(item.parentItem(), 'node_id'):
             self.node_double_clicked.emit(item.parentItem().node_id)
+
+
+    def _create_edges(self, nodes: List[Dict]):
+        """Create edge items between connected nodes"""
+        # Partition bilgisi
+        partition_groups = {}
+        group_a_nodes = []
+        group_b_nodes = []
+
+        for node in nodes:
+            if 'id' not in node:
+                continue
+            node_id = node['id']
+            if node.get('partition_group') == 'A':
+                partition_groups[node_id] = 'A'
+                group_a_nodes.append(node_id)
+            elif node.get('partition_group') == 'B':
+                partition_groups[node_id] = 'B'
+                group_b_nodes.append(node_id)
+
+        # Partition aktifse, her grubu kendi içinde bağla
+        if partition_groups:
+            # Group A - mesh topology
+            for i, n1 in enumerate(group_a_nodes):
+                for n2 in group_a_nodes[i + 1:]:
+                    if n1 in self.node_positions and n2 in self.node_positions:
+                        x1, y1 = self.node_positions[n1]
+                        x2, y2 = self.node_positions[n2]
+                        line = QGraphicsLineItem(x1, y1, x2, y2)
+                        line.setPen(QPen(QColor("#00BCD4"), 2))  # Cyan
+                        line.setZValue(-1)
+                        self.scene.addItem(line)
+                        self.edge_items.append(line)
+                        self.edge_connections[line] = (n1, n2)
+
+            # Group B - mesh topology
+            for i, n1 in enumerate(group_b_nodes):
+                for n2 in group_b_nodes[i + 1:]:
+                    if n1 in self.node_positions and n2 in self.node_positions:
+                        x1, y1 = self.node_positions[n1]
+                        x2, y2 = self.node_positions[n2]
+                        line = QGraphicsLineItem(x1, y1, x2, y2)
+                        line.setPen(QPen(QColor("#E91E63"), 2))  # Pink
+                        line.setZValue(-1)
+                        self.scene.addItem(line)
+                        self.edge_items.append(line)
+                        self.edge_connections[line] = (n1, n2)
+        else:
+            # Normal durum - eski kod
+            validators = [n['id'] for n in nodes if 'id' in n and n.get('role') == 'validator']
+            regulars = [n['id'] for n in nodes if 'id' in n and n.get('role') != 'validator']
+
+            pen = QPen(QColor("#3D3D3D"), 1)
+
+            # Connect validators
+            for i, v1 in enumerate(validators):
+                for v2 in validators[i + 1:]:
+                    if v1 in self.node_positions and v2 in self.node_positions:
+                        x1, y1 = self.node_positions[v1]
+                        x2, y2 = self.node_positions[v2]
+                        line = QGraphicsLineItem(x1, y1, x2, y2)
+                        line.setPen(pen)
+                        line.setZValue(-1)
+                        self.scene.addItem(line)
+                        self.edge_items.append(line)
+                        self.edge_connections[line] = (v1, v2)
+
+            # Connect regulars to first validator
+            if validators:
+                v = validators[0]
+                for regular in regulars:
+                    if v in self.node_positions and regular in self.node_positions:
+                        x1, y1 = self.node_positions[v]
+                        x2, y2 = self.node_positions[regular]
+                        line = QGraphicsLineItem(x1, y1, x2, y2)
+                        line.setPen(pen)
+                        line.setZValue(-1)
+                        self.scene.addItem(line)
+                        self.edge_items.append(line)
+                        self.edge_connections[line] = (v, regular)
