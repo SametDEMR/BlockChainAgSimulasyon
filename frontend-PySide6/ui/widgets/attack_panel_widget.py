@@ -305,7 +305,7 @@ class AttackPanelWidget(QWidget):
             self.selfish_attacker.addItem(node_id)
             
             # Byzantine için sadece validators
-            if node.get("is_validator", False):
+            if node.get("role") == "validator":
                 self.byzantine_target.addItem(node_id)
         
         # Eski seçimi geri yükle (varsa)
@@ -392,6 +392,9 @@ class AttackPanelWidget(QWidget):
         widget = self.active_attacks_list.itemWidget(item)
         if isinstance(widget, ActiveAttackItem):
             widget.update_progress(progress, remaining_time)
+
+            if progress >= 1.0 or remaining_time <= 0:
+                self.clear_active_attacks()
             
     def get_active_attacks_count(self) -> int:
         """Active attack sayısı"""

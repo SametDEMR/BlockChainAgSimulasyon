@@ -252,15 +252,23 @@ async def trigger_attack(request: TriggerAttackRequest):
             "target": request.target_node_id,
             "parameters": {"intensity": intensity}
         }
-    
+
     elif attack_type == AttackType.BYZANTINE:
         result = byzantine_attack.trigger(request.target_node_id)
         if not result["success"]:
             raise HTTPException(status_code=400, detail=result["message"])
-        
+
+        # AttackEngine'e kaydet
+        attack_id = attack_engine.trigger_attack(
+            attack_type=AttackType.BYZANTINE,
+            target=request.target_node_id,
+            parameters={"duration": result.get("duration", 30)}
+        )
+
         return {
             "status": "success",
             "message": result["message"],
+            "attack_id": attack_id,
             "attack_type": attack_type.value,
             "target": request.target_node_id,
             "duration": result.get("duration", 30)
