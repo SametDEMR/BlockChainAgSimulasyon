@@ -151,6 +151,7 @@ class MainWindow(QMainWindow):
         self.btn_reset.clicked.connect(self._on_reset)
         
         self.data_manager.connection_error.connect(self._on_connection_error)
+        self.data_manager.attacks_updated.connect(self._on_attacks_updated)
         self.updater.update_completed.connect(self._on_update_completed)
         
         # Attack panel connections
@@ -220,6 +221,22 @@ class MainWindow(QMainWindow):
         self.connection_label.setText("🔴 Connection Error")
         self.connection_label.setStyleSheet("color: red;")
         self.status_bar.showMessage(f"Error: {error}", 5000)
+
+    def _on_attacks_updated(self, attacks_data: dict):
+        """Attack status güncellendi"""
+        active_attacks = attacks_data.get('active_attacks', [])
+
+        for attack in active_attacks:
+            attack_id = attack.get('attack_id')
+            progress = attack.get('progress', 0) / 100.0  # 0-1 arası
+            remaining = attack.get('remaining', 0)
+
+            if attack_id:
+                self.attack_panel_widget.update_active_attack(
+                    attack_id,
+                    progress,
+                    remaining
+                )
     
     def _on_update_completed(self):
         """Handle update completion."""

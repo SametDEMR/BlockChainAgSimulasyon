@@ -39,27 +39,36 @@ class Attack:
         self.status = AttackStatus.IDLE
         self.started_at: Optional[datetime] = None
         self.ended_at: Optional[datetime] = None
+        self.duration: int = parameters.get('duration', 60)  # Varsayılan 60 saniye
         self.effects: List[str] = []
         self.task: Optional[asyncio.Task] = None
-        
-    def to_dict(self) -> dict:
-        """Saldırı bilgilerini dict olarak döndürür"""
-        return {
-            "attack_id": self.attack_id,
-            "attack_type": self.attack_type.value,
-            "target": str(self.target) if self.target else None,
-            "parameters": self.parameters,
-            "status": self.status.value,
-            "started_at": self.started_at.isoformat() if self.started_at else None,
-            "ended_at": self.ended_at.isoformat() if self.ended_at else None,
-            "duration": (
-                (self.ended_at - self.started_at).total_seconds()
-                if self.started_at and self.ended_at
-                else None
-            ),
-            "effects": self.effects,
-            "is_active": self.status == AttackStatus.ACTIVE
+
+    def to_dict(self):
+        """Attack nesnesini dict'e çevir (progress hesaplamalı)"""
+        result = {
+            'attack_id': self.attack_id,
+            'attack_type': self.attack_type,
+            'target': self.target,
+            'parameters': self.parameters,
+            'status': self.status.value,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+            'ended_at': self.ended_at.isoformat() if self.ended_at else None,
+            'effects': self.effects,
+            'is_active': self.status == AttackStatus.ACTIVE
         }
+
+        # Progress hesaplamaları (sadece aktif saldırılar için)
+        if self.status == AttackStatus.ACTIVE and self.started_at:
+            elapsed = (datetime.now() - self.started_at).total_seconds()
+            remaining = max(0, self.duration - elapsed)
+            progress = min(100, int((elapsed / self.duration) * 100))
+
+            result['duration'] = self.duration
+            result['elapsed'] = int(elapsed)
+            result['remaining'] = int(remaining)
+            result['progress'] = progress
+
+        return result
 
 class AttackEngine:
     """Saldırı motoru - tüm saldırıları yönetir"""
@@ -204,7 +213,7 @@ class AttackEngine:
                 for attack in self.active_attacks.values()
             ))
         }
-    
+
     def reset(self):
         """Saldırı motorunu sıfırlar"""
         # Tüm aktif taskları iptal et

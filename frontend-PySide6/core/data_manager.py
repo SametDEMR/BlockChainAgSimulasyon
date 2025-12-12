@@ -8,6 +8,7 @@ class DataManager(QObject):
     
     # Data update signals
     status_updated = Signal(dict)
+    attacks_updated = Signal(dict)
     nodes_updated = Signal(list)
     blockchain_updated = Signal(dict)
     pbft_updated = Signal(dict)
@@ -80,7 +81,7 @@ class DataManager(QObject):
             'blocks': blocks,
             'fork_status': fork_status
         }
-    
+
     def update_all_data(self):
         """Fetch all data from API and emit signals."""
         try:
@@ -88,25 +89,25 @@ class DataManager(QObject):
             if not self.api_client.is_connected():
                 self.connection_error.emit("Cannot connect to backend")
                 return
-            
+
             # Fetch all data
             status = self.api_client.get_status()
             if status and 'error' not in status:
                 self._cache['status'] = status
                 self.status_updated.emit(status)
-            
+
             nodes = self.api_client.get_nodes()
             if nodes is not None:
                 self._cache['nodes'] = nodes
                 self.nodes_updated.emit(nodes)
-            
+
             blockchain = self.api_client.get_blockchain()
             if blockchain and 'error' not in blockchain:
                 # Parse blockchain data
                 parsed = self._parse_blockchain(blockchain)
                 self._cache['blockchain'] = parsed
                 self.blockchain_updated.emit(parsed)
-                
+
                 # Emit fork status separately
                 fork_status = parsed.get('fork_status', {})
                 if fork_status:
@@ -114,33 +115,34 @@ class DataManager(QObject):
                         'active_forks': fork_status.get('alternative_chains_count', 0),
                         'orphan_blocks': fork_status.get('orphaned_blocks_count', 0)
                     })
-            
+
             pbft = self.api_client.get_pbft_status()
             if pbft and 'error' not in pbft:
                 self._cache['pbft'] = pbft
                 self.pbft_updated.emit(pbft)
-            
+
             metrics = self.api_client.get_metrics()
             if metrics and 'error' not in metrics:
                 self._cache['metrics'] = metrics
                 self.metrics_updated.emit(metrics)
-            
+
+            # Attack status güncelle - GÜNCELLENMİŞ BÖLÜM
             attacks = self.api_client.get_attack_status()
-            if attacks and 'error' not in attacks:
+            if attacks:  # None kontrolü yeterli, 'error' kontrolüne gerek yok
                 self._cache['attacks'] = attacks
                 self.attacks_updated.emit(attacks)
-            
+
             messages = self.api_client.get_network_messages()
             if messages and 'error' not in messages:
                 msg_list = messages.get('messages', [])
                 self._cache['messages'] = msg_list
                 self.messages_updated.emit(msg_list)
-            
+
             fork_status = self.api_client.get_fork_status()
             if fork_status and 'error' not in fork_status:
                 self._cache['fork_status'] = fork_status
                 self.fork_status_updated.emit(fork_status)
-                
+
         except Exception as e:
             self.api_error.emit(f"Data update error: {str(e)}")
     

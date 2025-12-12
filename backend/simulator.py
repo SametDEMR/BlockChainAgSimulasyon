@@ -51,7 +51,8 @@ class Simulator:
         first_node = Node(
             role="validator",
             total_validators=validator_count,
-            message_broker=self.message_broker
+            message_broker=self.message_broker,
+            node_id=f"node_0"
         )
         first_node.id = f"node_0"
         genesis_chain = first_node.blockchain.chain.copy()  # Genesis block'u kaydet
@@ -65,7 +66,8 @@ class Simulator:
             node = Node(
                 role="validator",
                 total_validators=validator_count,
-                message_broker=self.message_broker
+                message_broker=self.message_broker,
+                node_id=f"node_{i}"
             )
             node.id = f"node_{i}"
             node.blockchain.chain = genesis_chain.copy()  # Aynı genesis'i kullan
@@ -110,6 +112,15 @@ class Simulator:
                     if validator.pbft and validator.pbft.is_primary() and validator.is_active:
                         primary = validator
                         break
+                
+                # DEBUG: Primary kontrolü
+                if primary:
+                    print(f"✅ PRIMARY FOUND: {primary.id}")
+                else:
+                    print(f"❌ NO PRIMARY! Validator count: {len(self.validator_nodes)}")
+                    for v in self.validator_nodes:
+                        if v.pbft:
+                            print(f"  - {v.id}: is_primary={v.pbft.is_primary()}, view={v.pbft.view}")
                 
                 if primary:
                     # Primary blok önerir

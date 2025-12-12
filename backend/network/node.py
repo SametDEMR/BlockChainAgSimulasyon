@@ -28,17 +28,18 @@ class Node:
         is_byzantine (bool): Byzantine node mu?
         is_sybil (bool): Sybil saldırı node'u mu?
     """
-    
-    def __init__(self, role="regular", total_validators=4, message_broker=None):
+
+    def __init__(self, role="regular", total_validators=4, message_broker=None, node_id=None):
         """
         Node oluştur
-        
+
         Args:
             role (str): Node rolü ("validator" veya "regular")
             total_validators (int): Toplam validator sayısı (PBFT için)
             message_broker: MessageBroker instance (opsiyonel)
+            node_id (str): Node ID (opsiyonel, verilmezse random)
         """
-        self.id = str(uuid.uuid4())[:8]
+        self.id = node_id if node_id else str(uuid.uuid4())[:8]
         self.role = role
         self.blockchain = Blockchain()
         self.wallet = Wallet()
