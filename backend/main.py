@@ -332,10 +332,18 @@ async def trigger_sybil_attack(num_nodes: int = 20):
     success = await sybil_attack.trigger(num_nodes=num_nodes)
     if not success:
         raise HTTPException(status_code=400, detail="Failed to trigger Sybil attack")
+
+    # Engine'e kaydet (EKLE)
+    attack_id = attack_engine.trigger_attack(
+        attack_type=AttackType.SYBIL,
+        target="network",
+        parameters={"num_nodes": num_nodes, "duration": 60}
+    )
+
     return {
         "status": "success",
         "message": f"Sybil attack triggered with {num_nodes} fake nodes",
-        "attack_id": sybil_attack.attack_id,
+        "attack_id": attack_id,  # EKLE
         "attack_status": sybil_attack.get_status()
     }
 
