@@ -39,6 +39,7 @@ app.add_middleware(
 simulator = Simulator()
 attack_engine = AttackEngine()
 byzantine_attack = ByzantineAttack(simulator)
+selfish_mining_attack = SelfishMining(simulator)
 sybil_attack = SybilAttack(simulator)
 majority_attack = MajorityAttack(simulator, attack_engine)
 network_partition = NetworkPartition(simulator, attack_engine)
@@ -227,55 +228,62 @@ async def reset_simulator():
     return {"status": "success", "message": "Reset complete", "total_nodes": len(simulator.nodes)}
 
 
-# Attack Endpoints
 @app.post("/attack/trigger")
 async def trigger_attack(request: TriggerAttackRequest):
     target_node = simulator.get_node_by_id(request.target_node_id)
     if not target_node:
         raise HTTPException(status_code=404, detail="Target node not found")
-    
+
     try:
         attack_type = AttackType(request.attack_type.lower())
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid attack type: {request.attack_type}")
-    
+
+    # Attack'i başlat
     if attack_type == AttackType.DDOS:
         intensity = request.parameters.get("intensity", "high") if request.parameters else "high"
         ddos = DDoSAttack(target_node=target_node, attack_engine=attack_engine, intensity=intensity)
         attack_id = await ddos.execute()
-        
-        return {
-            "status": "success",
-            "message": f"DDoS attack triggered on {request.target_node_id}",
-            "attack_id": attack_id,
-            "attack_type": attack_type.value,
-            "target": request.target_node_id,
-            "parameters": {"intensity": intensity}
-        }
+        duration = 60
 
     elif attack_type == AttackType.BYZANTINE:
         result = byzantine_attack.trigger(request.target_node_id)
         if not result["success"]:
             raise HTTPException(status_code=400, detail=result["message"])
+        duration = result.get("duration", 30)
 
-        # AttackEngine'e kaydet
+        # Engine'e kaydet
         attack_id = attack_engine.trigger_attack(
             attack_type=AttackType.BYZANTINE,
             target=request.target_node_id,
-            parameters={"duration": result.get("duration", 30)}
+            parameters={"duration": duration}
         )
 
-        return {
-            "status": "success",
-            "message": result["message"],
-            "attack_id": attack_id,
-            "attack_type": attack_type.value,
-            "target": request.target_node_id,
-            "duration": result.get("duration", 30)
-        }
-    
+    elif attack_type == AttackType.SELFISH_MINING:
+        result = selfish_mining_attack.trigger(request.target_node_id)
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result["message"])
+        duration = result.get("duration", 60)
+
+        # Engine'e kaydet
+        attack_id = attack_engine.trigger_attack(
+            attack_type=AttackType.SELFISH_MINING,
+            target=request.target_node_id,
+            parameters={"duration": duration}
+        )
+
     else:
         raise HTTPException(status_code=501, detail=f"Attack {attack_type.value} not implemented")
+
+    # Ortak response
+    return {
+        "status": "success",
+        "message": f"{attack_type.value} attack triggered on {request.target_node_id}",
+        "attack_id": attack_id,
+        "attack_type": attack_type.value,
+        "target": request.target_node_id,
+        "duration": duration
+    }
 
 
 @app.get("/attack/status")
@@ -425,9 +433,18 @@ async def trigger_selfish_mining_attack(target_node_id: str):
     result = selfish_mining.trigger(target_node_id)
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
+
+    # Engine'e kaydet (YENİ)
+    attack_id = attack_engine.trigger_attack(
+        attack_type=AttackType.SELFISH_MINING,
+        target=target_node_id,
+        parameters={"duration": result.get("duration", 60)}
+    )
+
     return {
         "status": "success",
         "message": result["message"],
+        "attack_id": attack_id,  # YENİ
         "target_node": result["target_node"],
         "duration": result["duration"],
         "reveal_threshold": result["reveal_threshold"],
