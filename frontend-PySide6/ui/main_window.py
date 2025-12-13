@@ -1,7 +1,7 @@
 """Main Window for PySide6 Blockchain Simulator."""
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QStatusBar, QTabWidget, QDockWidget
+    QPushButton, QLabel, QStatusBar, QTabWidget
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
@@ -19,7 +19,7 @@ class MainWindow(QMainWindow):
         self.updater = updater
         
         self.setWindowTitle("Blockchain Attack Simulator")
-        self.setMinimumSize(1200, 800)
+        self.setFixedSize(1200, 800)
         
         self._setup_ui()
         self._setup_connections()
@@ -31,12 +31,10 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
         
         layout = QVBoxLayout(self.central_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         
-        # Toolbar
-        toolbar_layout = self._create_toolbar()
-        layout.addLayout(toolbar_layout)
-        
-        # Tab Widget
+        # Tab Widget (no toolbar)
         self.tabs = QTabWidget()
         layout.addWidget(self.tabs)
         
@@ -45,21 +43,38 @@ class MainWindow(QMainWindow):
         from ui.pages.nodes_page import NodesPage
         from ui.pages.network_page import NetworkMapPage
         from ui.pages.blockchain_page import BlockchainExplorerPage
+        from ui.pages.pbft_page import PBFTPage
+        from ui.widgets.attack_panel_widget import AttackPanelWidget
+        from ui.widgets.metrics_widget import MetricsWidget
+        from ui.widgets.pbft_widget import PBFTWidget
         
-        self.dashboard_page = DashboardPage(self.data_manager)
+        # Create widgets that will be used in dashboard
+        self.attack_panel_widget = AttackPanelWidget()
+        self.metrics_widget = MetricsWidget(self.data_manager)
+        self.pbft_widget = PBFTWidget()
+        
+        # Create dashboard with widgets
+        self.dashboard_page = DashboardPage(
+            self.data_manager,
+            self.attack_panel_widget,
+            self.metrics_widget,
+            self.pbft_widget
+        )
         self.nodes_page = NodesPage(self.data_manager)
         self.network_page = NetworkMapPage(self.data_manager)
         self.blockchain_page = BlockchainExplorerPage(self.data_manager)
+        self.pbft_page = PBFTPage(self.pbft_widget)
         
         self.tabs.addTab(self.dashboard_page, "📊 Dashboard")
         self.tabs.addTab(self.nodes_page, "🖥️ Nodes")
         self.tabs.addTab(self.network_page, "🗺️ Network Map")
         self.tabs.addTab(self.blockchain_page, "⛓️ Blockchain")
+        self.tabs.addTab(self.pbft_page, "📨 PBFT Messages")
         
-        # Dock Widgets
-        self._create_attack_panel_dock()
-        self._create_metrics_dock()
-        self._create_pbft_dock()
+        # Connect dashboard button signals
+        self.dashboard_page.start_clicked.connect(self._on_start)
+        self.dashboard_page.stop_clicked.connect(self._on_stop)
+        self.dashboard_page.reset_clicked.connect(self._on_reset)
         
         # Status bar
         self.status_bar = QStatusBar()
@@ -71,85 +86,9 @@ class MainWindow(QMainWindow):
         self.status_bar.addPermanentWidget(self.connection_label)
         self.status_bar.addPermanentWidget(self.update_label)
     
-    def _create_toolbar(self):
-        """Create toolbar with control buttons."""
-        layout = QHBoxLayout()
-        
-        # Control buttons
-        self.btn_start = QPushButton("▶ Start")
-        self.btn_stop = QPushButton("⏸ Stop")
-        self.btn_reset = QPushButton("🔄 Reset")
-        
-        self.btn_start.setMinimumWidth(100)
-        self.btn_stop.setMinimumWidth(100)
-        self.btn_reset.setMinimumWidth(100)
-        
-        self.btn_stop.setEnabled(False)
-        
-        layout.addWidget(self.btn_start)
-        layout.addWidget(self.btn_stop)
-        layout.addWidget(self.btn_reset)
-        layout.addStretch()
-        
-        return layout
-    
-    def _create_attack_panel_dock(self):
-        """Create attack control panel as left dock widget."""
-        from ui.widgets.attack_panel_widget import AttackPanelWidget
-        
-        # Create dock widget
-        self.attack_panel_dock = QDockWidget("Attack Control Panel", self)
-        self.attack_panel_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
-        
-        # Create attack panel widget
-        self.attack_panel_widget = AttackPanelWidget()
-        
-        # Add to dock
-        self.attack_panel_dock.setWidget(self.attack_panel_widget)
-        
-        # Add dock to main window (left side)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.attack_panel_dock)
-    
-    def _create_metrics_dock(self):
-        """Create metrics dashboard as right dock widget."""
-        from ui.widgets.metrics_widget import MetricsWidget
-        
-        # Create dock widget
-        self.metrics_dock = QDockWidget("Metrics Dashboard", self)
-        self.metrics_dock.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
-        
-        # Create metrics widget
-        self.metrics_widget = MetricsWidget(self.data_manager)
-        
-        # Add to dock
-        self.metrics_dock.setWidget(self.metrics_widget)
-        
-        # Add dock to main window (right side)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.metrics_dock)
-    
-    def _create_pbft_dock(self):
-        """Create PBFT widget as bottom dock widget."""
-        from ui.widgets.pbft_widget import PBFTWidget
-        
-        # Create dock widget
-        self.pbft_dock = QDockWidget("PBFT Consensus Status", self)
-        self.pbft_dock.setAllowedAreas(Qt.BottomDockWidgetArea | Qt.TopDockWidgetArea)
-        
-        # Create PBFT widget
-        self.pbft_widget = PBFTWidget()
-        
-        # Add to dock
-        self.pbft_dock.setWidget(self.pbft_widget)
-        
-        # Add dock to main window (bottom)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.pbft_dock)
     
     def _setup_connections(self):
         """Setup signal connections."""
-        self.btn_start.clicked.connect(self._on_start)
-        self.btn_stop.clicked.connect(self._on_stop)
-        self.btn_reset.clicked.connect(self._on_reset)
-        
         self.data_manager.connection_error.connect(self._on_connection_error)
         self.data_manager.attacks_updated.connect(self._on_attacks_updated)
         self.updater.update_completed.connect(self._on_update_completed)
@@ -178,8 +117,8 @@ class MainWindow(QMainWindow):
         """Handle start button."""
         result = self.api_client.start_simulator()
         if result and 'error' not in result:
-            self.btn_start.setEnabled(False)
-            self.btn_stop.setEnabled(True)
+            self.dashboard_page.btn_start.setEnabled(False)
+            self.dashboard_page.btn_stop.setEnabled(True)
             self.status_bar.showMessage("Simulator started", 3000)
             self.updater.start_updating()
         else:
@@ -189,8 +128,8 @@ class MainWindow(QMainWindow):
         """Handle stop button."""
         result = self.api_client.stop_simulator()
         if result and 'error' not in result:
-            self.btn_start.setEnabled(True)
-            self.btn_stop.setEnabled(False)
+            self.dashboard_page.btn_start.setEnabled(True)
+            self.dashboard_page.btn_stop.setEnabled(False)
             self.status_bar.showMessage("Simulator stopped", 3000)
             self.updater.stop_updating()
         else:
@@ -200,8 +139,8 @@ class MainWindow(QMainWindow):
         """Handle reset button."""
         result = self.api_client.reset_simulator()
         if result and 'error' not in result:
-            self.btn_start.setEnabled(True)
-            self.btn_stop.setEnabled(False)
+            self.dashboard_page.btn_start.setEnabled(True)
+            self.dashboard_page.btn_stop.setEnabled(False)
             self.status_bar.showMessage("Simulator reset", 3000)
             
             self.updater.stop_updating()
@@ -211,7 +150,7 @@ class MainWindow(QMainWindow):
             self.network_page.clear_network()
             self.blockchain_page.clear_display()
             self.metrics_widget.clear_display()
-            self.pbft_widget.clear_display()
+            self.pbft_page.clear_display()
             self.attack_panel_widget.clear_active_attacks()
         else:
             self.status_bar.showMessage("Failed to reset simulator", 3000)
