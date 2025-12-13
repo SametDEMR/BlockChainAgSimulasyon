@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt, Signal
 from ui.widgets.blockchain_graph_widget import BlockchainGraphWidget
 from ui.widgets.block_item import BlockItem
 from ui.widgets.chain_drawer import ChainDrawer
+from ui.widgets.fork_status_widget import ForkStatusWidget
 from ui.dialogs.block_detail_dialog import BlockDetailDialog
 
 
@@ -42,6 +43,11 @@ class BlockchainExplorerPage(QWidget):
         # Stats section
         stats_group = self._create_stats_section()
         layout.addWidget(stats_group)
+        
+        # Fork Status Widget (initially hidden)
+        self.fork_status_widget = ForkStatusWidget()
+        self.fork_status_widget.setVisible(False)
+        layout.addWidget(self.fork_status_widget)
         
         # Control bar
         control_bar = self._create_control_bar()
@@ -149,11 +155,24 @@ class BlockchainExplorerPage(QWidget):
     
     def _on_fork_status_updated(self, fork_status):
         """Handle fork status update."""
-        forks_count = fork_status.get('active_forks', 0)
-        self.lbl_forks.setText(f"Forks: {forks_count}")
+        # Fork status is a dict with 'fork_statuses' key containing list of node fork statuses
+        fork_statuses = fork_status.get('fork_statuses', [])
         
-        orphan_count = fork_status.get('orphan_blocks', 0)
-        self.lbl_orphan_blocks.setText(f"Orphan Blocks: {orphan_count}")
+        # Update fork status widget
+        self.fork_status_widget.update_fork_status(fork_statuses)
+        
+        # Count total forks and orphaned blocks
+        total_forks = 0
+        total_orphaned = 0
+        
+        for node_status in fork_statuses:
+            fs = node_status.get('fork_status', {})
+            total_forks += fs.get('fork_events_count', 0)
+            total_orphaned += fs.get('orphaned_blocks_count', 0)
+        
+        # Update stats labels
+        self.lbl_forks.setText(f"Forks: {total_forks}")
+        self.lbl_orphan_blocks.setText(f"Orphan Blocks: {total_orphaned}")
     
     def _render_blockchain(self, blockchain_data):
         """Render blockchain visualization."""
@@ -250,6 +269,7 @@ class BlockchainExplorerPage(QWidget):
         self.lbl_orphan_blocks.setText("Orphan Blocks: 0")
         
         self.graph_widget.clear_blocks()
+        self.fork_status_widget._clear_display()
         
         self.chk_show_genesis.setChecked(True)
         self.chk_show_normal.setChecked(True)

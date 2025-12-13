@@ -5,6 +5,7 @@ from .node_status_card import NodeStatusCard
 from .attack_panel_widget import AttackPanelWidget
 from .active_attack_item import ActiveAttackItem
 from .network_graph_widget import NetworkGraphWidget, NodeItem
+from .fork_status_widget import ForkStatusWidget
 
 __all__ = [
     'MetricsWidget', 
@@ -12,5 +13,6 @@ __all__ = [
     'AttackPanelWidget', 
     'ActiveAttackItem',
     'NetworkGraphWidget',
-    'NodeItem'
+    'NodeItem',
+    'ForkStatusWidget'
 ]

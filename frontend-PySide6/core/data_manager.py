@@ -108,14 +108,6 @@ class DataManager(QObject):
                 self._cache['blockchain'] = parsed
                 self.blockchain_updated.emit(parsed)
 
-                # Emit fork status separately
-                fork_status = parsed.get('fork_status', {})
-                if fork_status:
-                    self.fork_status_updated.emit({
-                        'active_forks': fork_status.get('alternative_chains_count', 0),
-                        'orphan_blocks': fork_status.get('orphaned_blocks_count', 0)
-                    })
-
             pbft = self.api_client.get_pbft_status()
             if pbft and 'error' not in pbft:
                 self._cache['pbft'] = pbft
@@ -235,6 +227,10 @@ class DataManager(QObject):
     
     def get_cached_fork_status(self) -> Optional[Dict]:
         """Get cached fork status."""
+        return self._cache['fork_status']
+    
+    def get_fork_status(self) -> Optional[Dict]:
+        """Get fork status (alias for get_cached_fork_status)."""
         return self._cache['fork_status']
     
     def get_node_by_id(self, node_id: str) -> Optional[Dict]:

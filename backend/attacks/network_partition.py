@@ -132,6 +132,8 @@ class NetworkPartition:
             }
             node.status = "under_attack"
             node.partition_group = "A"
+            # ✅ Fork detection'u aktif et
+            node.blockchain.fork_detected = True
         
         for node in self.group_b:
             self.original_states[node.id] = {
@@ -140,6 +142,8 @@ class NetworkPartition:
             }
             node.status = "under_attack"
             node.partition_group = "B"
+            # ✅ Fork detection'u aktif et
+            node.blockchain.fork_detected = True
         
         self.partition_active = True
         
@@ -200,7 +204,12 @@ class NetworkPartition:
         group_a_max_length = max([length for _, length in group_a_chains], default=0)
         group_b_max_length = max([length for _, length in group_b_chains], default=0)
         
-        # En uzun zinciri belirle
+        # ✅ FORK TESPİT ET - Partition sırasında farklı uzunluklar = fork
+        if group_a_max_length != group_b_max_length:
+            # Tüm node'larda fork_detected flag'ini set et
+            for node in self.group_a + self.group_b:
+                node.blockchain.fork_detected = True
+        
         # En uzun zinciri belirle
         winner_group = "A" if group_a_max_length >= group_b_max_length else "B"
         winner_length = max(group_a_max_length, group_b_max_length)
@@ -231,17 +240,27 @@ class NetworkPartition:
                 winner_chain_node = node
                 break
         
-        # Kaybeden grubun zincirlerini orphan yap
+        # ✅ TÜM NODE'LARI KAZANAN ZİNCİRLE SENKRONİZE ET
         orphaned_blocks = 0
         if winner_chain_node:
+            winner_chain = winner_chain_node.blockchain.chain
+            
+            # Kaybeden grubu güncelle
             for loser_node in loser_nodes:
-                # Fork tespit et
                 loser_chain_length = len(loser_node.blockchain.chain)
-                if loser_chain_length > 0:
-                    loser_node.blockchain.detect_fork(winner_chain_node.blockchain.chain)
-                    # En uzun zinciri kabul et
-                    loser_node.blockchain.resolve_fork(winner_chain_node.blockchain.chain)
+                if loser_chain_length > 0 and loser_chain_length < winner_length:
+                    # Fork tespit et ve kaydet
+                    loser_node.blockchain.detect_fork(winner_chain)
+                    # Kazanan zinciri kabul et
+                    loser_node.blockchain.resolve_fork(winner_chain)
                     orphaned_blocks += loser_chain_length
+            
+            # ✅ KAZANAN GRUBU DA GÜNCELLEMELİYİZ (kısa olanlar varsa)
+            for winner_node in winner_nodes:
+                if len(winner_node.blockchain.chain) < winner_length:
+                    # Bu node kazanan gruptaki en uzun zinciri almamış
+                    winner_node.blockchain.chain = [b for b in winner_chain]
+                    print(f"✅ Synced {winner_node.id} to winning chain ({winner_length} blocks)")
         
         if orphaned_blocks > 0:
             self.attack_engine.add_attack_effect(
@@ -275,6 +294,8 @@ class NetworkPartition:
                 original = self.original_states[node.id]
                 node.status = "healthy"
                 node.partition_group = None
+                # ✅ Fork resolved - flag'ı temizle
+                node.blockchain.fork_detected = False
         
         self.group_a.clear()
         self.group_b.clear()

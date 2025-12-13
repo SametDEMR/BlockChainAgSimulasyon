@@ -133,13 +133,39 @@ class Simulator:
             
             # Regular node'lar için klasik mining
             active_regular = [n for n in self.regular_nodes if n.is_active]
-            if active_regular:
-                miner = random.choice(active_regular)
-                block = miner.mine_block()
+            
+            # ✅ PARTITION KONTROLÜ - Her iki grupta ayrı mining
+            if self.message_broker.partition_active:
+                # Group A'dan miner seç
+                group_a_miners = [n for n in active_regular if n.id in self.message_broker.group_a_ids]
+                if group_a_miners:
+                    miner_a = random.choice(group_a_miners)
+                    block_a = miner_a.mine_block()
+                    if block_a:
+                        # Bloğu sadece Group A node'larına yay
+                        for node in self.nodes:
+                            if node.id in self.message_broker.group_a_ids and node != miner_a:
+                                node.receive_block(block_a)
                 
-                if block:
-                    # Bloğu diğer regular node'lara yay
-                    await self.broadcast_block(block, exclude_node=miner)
+                # Group B'den miner seç
+                group_b_miners = [n for n in active_regular if n.id in self.message_broker.group_b_ids]
+                if group_b_miners:
+                    miner_b = random.choice(group_b_miners)
+                    block_b = miner_b.mine_block()
+                    if block_b:
+                        # Bloğu sadece Group B node'larına yay
+                        for node in self.nodes:
+                            if node.id in self.message_broker.group_b_ids and node != miner_b:
+                                node.receive_block(block_b)
+            else:
+                # Normal durum: Partition yoksa tek miner
+                if active_regular:
+                    miner = random.choice(active_regular)
+                    block = miner.mine_block()
+                    
+                    if block:
+                        # Bloğu diğer regular node'lara yay
+                        await self.broadcast_block(block, exclude_node=miner)
     
     async def pbft_message_processing(self):
         """
