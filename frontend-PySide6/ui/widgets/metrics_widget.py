@@ -60,13 +60,13 @@ class MetricsWidget(QWidget):
         self.content_layout = QVBoxLayout(content)
         self.content_layout.setSpacing(10)
         
-        # 1. Response Time Graph Section (Placeholder)
+        # 1. Response Time Graph Section - store reference but don't add to layout
         self.graph_section = self._create_graph_section()
-        self.content_layout.addWidget(self.graph_section)
+        # Don't add: self.content_layout.addWidget(self.graph_section)
         
-        # 2. Node Status Cards Section (Placeholder)
+        # 2. Node Status Cards Section - store reference but don't add to layout  
         self.cards_section = self._create_cards_section()
-        self.content_layout.addWidget(self.cards_section)
+        # Don't add: self.content_layout.addWidget(self.cards_section)
         
         # 3. Network Health Section
         self.health_section = self._create_health_section()
@@ -109,22 +109,18 @@ class MetricsWidget(QWidget):
     
     def _create_cards_section(self):
         """Create node status cards section."""
-        group = QGroupBox("Node Status Cards")
-        layout = QVBoxLayout(group)
-        
-        # Grid for cards (2 columns)
-        from PySide6.QtWidgets import QGridLayout
+        # Just create the grid, don't add to any parent layout
+        # Dashboard will handle adding it
         self.cards_grid = QGridLayout()
         self.cards_grid.setSpacing(10)
         self.cards_grid.setColumnStretch(0, 1)
         self.cards_grid.setColumnStretch(1, 1)
         
-        layout.addLayout(self.cards_grid)
-        
         # Dictionary to store card widgets
         self.status_cards = {}  # {node_id: NodeStatusCard}
         
-        return group
+        # Return None since we're not creating a section widget
+        return None
     
     def _create_health_section(self):
         """Create network health bars section."""

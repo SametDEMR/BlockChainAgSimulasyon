@@ -7,18 +7,6 @@ Her sorun için:
 3. Neye cevap vereceğiniz
 
 belirtilmiştir.
-
----
-
-Sybil Attack durdurma işlemi sonrasında Sybil nodelar hala durmaya devam ediyor. Bunların silinmesi gerekir. Invalid Hash felan devam ediyor.
-
-Stop butonu ile hepsini durdurmaya bakıcaz.
-
-UI değişikliği yapılabilir. Saldırılar ve bu saldırıların etkileri ana ekranda görüntülenir.
-- System Overview altındaki network health kaldıralım. recent activity ve PBFT kısımlarının hepsini ayrı tablara yerleştirelim.
-- Ana ekranın en altına metric dashboardiı ve onun yanına node status cardını koyalım. Node status card scrollu olsun, metric dashboard sabit olacak. Attack control paneli sol üstte olacak. sistem bileşenleri sağ üstte olacaktır.
-- Genel tüm herşey sabit olacaktır.
-- tablar arasında ortak ekranmlar olmayacaktır. Tab değişince tüm sayfanın içeriği değişecektir. Buna göre ayarlamalarımıza devam edelim. Dettaylandıralım.
 ------
 
 ## 🔴 SORUN 4: Network Health Çalışmıyor
