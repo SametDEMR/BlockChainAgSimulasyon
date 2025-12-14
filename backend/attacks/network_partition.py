@@ -214,15 +214,6 @@ class NetworkPartition:
         winner_group = "A" if group_a_max_length >= group_b_max_length else "B"
         winner_length = max(group_a_max_length, group_b_max_length)
         loser_length = min(group_a_max_length, group_b_max_length)
-
-        # ✅ EKLE - Merge sonucunu yazdır
-        print("\n" + "=" * 60)
-        print("🔗 PARTITION MERGE")
-        print("=" * 60)
-        print(f"🏆 Winner: Group {winner_group} (chain length: {winner_length})")
-        print(f"❌ Loser: Group {'B' if winner_group == 'A' else 'A'} (chain length: {loser_length})")
-        print(f"📦 {orphaned_blocks if 'orphaned_blocks' in locals() else 0} blocks orphaned")
-        print("=" * 60 + "\n")
         
         self.attack_engine.add_attack_effect(
             self.attack_id,
@@ -261,6 +252,15 @@ class NetworkPartition:
                     # Bu node kazanan gruptaki en uzun zinciri almamış
                     winner_node.blockchain.chain = [b for b in winner_chain]
                     print(f"✅ Synced {winner_node.id} to winning chain ({winner_length} blocks)")
+        
+        # Merge sonucunu yazdır
+        print("\n" + "=" * 60)
+        print("🔗 PARTITION MERGE")
+        print("=" * 60)
+        print(f"🏆 Winner: Group {winner_group} (chain length: {winner_length})")
+        print(f"❌ Loser: Group {'B' if winner_group == 'A' else 'A'} (chain length: {loser_length})")
+        print(f"📦 {orphaned_blocks} blocks orphaned")
+        print("=" * 60 + "\n")
         
         if orphaned_blocks > 0:
             self.attack_engine.add_attack_effect(

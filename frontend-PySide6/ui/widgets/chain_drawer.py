@@ -11,25 +11,26 @@ class ChainDrawer:
     BLOCK_WIDTH = 100
     BLOCK_HEIGHT = 80
     HORIZONTAL_SPACING = 20
-    VERTICAL_SPACING = 100
-    BASE_Y = 50
+    VERTICAL_SPACING = 120  # Increased for fork clarity
+    BASE_Y = 200  # Center position
     
     # Line colors
     MAIN_CHAIN_COLOR = QColor('#4CAF50')      # Green
-    FORK_CHAIN_COLOR = QColor('#FF9800')      # Orange
-    ORPHAN_LINE_COLOR = QColor('#9E9E9E')     # Gray
+    WINNER_CHAIN_COLOR = QColor('#4CAF50')    # Green
+    ORPHAN_CHAIN_COLOR = QColor('#757575')    # Gray
+    ACTIVE_FORK_COLOR = QColor('#FF9800')     # Orange
     
     def __init__(self):
         """Initialize chain drawer."""
         self.blocks = []
         self.connections = []
-        self.fork_levels = {}  # Track Y-offset for each fork
+        self.fork_branches = []
     
     def calculate_layout(self, blockchain_data):
-        """Calculate positions for all blocks.
+        """Calculate positions for all blocks with fork visualization.
         
         Args:
-            blockchain_data: Dictionary containing blockchain information
+            blockchain_data: Dictionary containing blockchain and fork information
             
         Returns:
             dict: Layout information with block positions and connections
@@ -38,116 +39,90 @@ class ChainDrawer:
         if not blocks:
             return {'blocks': [], 'connections': []}
         
+        # Get fork branches from blockchain data
+        chain_data = blockchain_data.get('chain', {})
+        fork_status = chain_data.get('fork_status', {})
+        fork_branches = fork_status.get('fork_branches', [])
+        
+        # DEBUG
+        print(f"[ChainDrawer] Blocks count: {len(blocks)}")
+        print(f"[ChainDrawer] Fork branches count: {len(fork_branches)}")
+        for i, branch in enumerate(fork_branches):
+            print(f"  Branch {i}: status={branch.get('status')}, blocks={len(branch.get('chain', []))}")
+        
         # Build block index map
         block_map = {block['hash']: block for block in blocks}
         
-        # Identify main chain
-        main_chain = self._identify_main_chain(blocks)
-        
-        # Identify forks
-        forks = self._identify_forks(blocks, main_chain, block_map)
+        # Process fork branches for visualization
+        branch_info = self._process_fork_branches(fork_branches, blocks)
         
         # Calculate positions
-        positions = self._calculate_positions(blocks, main_chain, forks)
+        positions = self._calculate_positions_with_forks(blocks, branch_info)
         
         # Calculate connections
-        connections = self._calculate_connections(blocks, positions, block_map)
+        connections = self._calculate_connections_with_forks(blocks, positions, block_map, branch_info)
         
         return {
             'blocks': [
                 {
                     'data': block,
-                    'position': positions[block['hash']],
-                    'is_main_chain': block['hash'] in main_chain,
-                    'fork_id': forks.get(block['hash'])
+                    'position': positions.get(block['hash'], (0, 0)),
+                    'branch_status': branch_info.get(block['hash'], {}).get('status', 'main')
                 }
                 for block in blocks
             ],
-            'connections': connections
+            'connections': connections,
+            'fork_branches': fork_branches
         }
     
-    def _identify_main_chain(self, blocks):
-        """Identify main chain (longest chain).
+    def _process_fork_branches(self, fork_branches, blocks):
+        """Process fork branches to assign blocks to branches.
         
         Args:
-            blocks: List of blocks
+            fork_branches: List of fork branch data from backend
+            blocks: List of all blocks
             
         Returns:
-            set: Set of block hashes in main chain
+            dict: Block hash to branch info mapping
         """
-        if not blocks:
-            return set()
+        branch_info = {}
         
-        # Find block with highest index
-        max_index_block = max(blocks, key=lambda b: b.get('index', 0))
+        print(f"[_process_fork_branches] Processing {len(fork_branches)} branches")
         
-        # Trace back to genesis
-        main_chain = set()
-        current_hash = max_index_block['hash']
-        block_map = {block['hash']: block for block in blocks}
-        
-        while current_hash in block_map:
-            block = block_map[current_hash]
-            main_chain.add(current_hash)
+        for branch_idx, branch in enumerate(fork_branches):
+            branch_chain = branch.get('chain', [])
+            status = branch.get('status', 'active')
+            fork_point = branch.get('fork_point', 0)
             
-            # Move to previous block
-            prev_hash = block.get('previous_hash')
-            if prev_hash == '0' or prev_hash not in block_map:
-                break
-            current_hash = prev_hash
+            # Assign Y-level based on branch index
+            y_offset = branch_idx - (len(fork_branches) - 1) / 2
+            
+            print(f"  Branch {branch_idx}: status={status}, fork_point={fork_point}, y_offset={y_offset}, blocks={len(branch_chain)}")
+            
+            for block in branch_chain:
+                block_hash = block.get('hash')
+                if block_hash:
+                    branch_info[block_hash] = {
+                        'status': status,
+                        'fork_point': fork_point,
+                        'y_offset': y_offset,
+                        'branch_idx': branch_idx
+                    }
         
-        return main_chain
+        print(f"[_process_fork_branches] Total blocks assigned: {len(branch_info)}")
+        return branch_info
     
-    def _identify_forks(self, blocks, main_chain, block_map):
-        """Identify fork branches.
+    def _calculate_positions_with_forks(self, blocks, branch_info):
+        """Calculate X,Y positions for blocks with fork branches.
         
         Args:
             blocks: List of blocks
-            main_chain: Set of main chain block hashes
-            block_map: Hash to block mapping
-            
-        Returns:
-            dict: Block hash to fork_id mapping
-        """
-        forks = {}
-        fork_id = 0
-        
-        for block in blocks:
-            block_hash = block['hash']
-            
-            # Skip if in main chain or orphan
-            if block_hash in main_chain or block.get('is_orphan'):
-                continue
-            
-            # This is a fork block
-            forks[block_hash] = fork_id
-            
-            # Trace back until we hit main chain or genesis
-            current_hash = block.get('previous_hash')
-            while current_hash and current_hash not in main_chain:
-                if current_hash in block_map:
-                    forks[current_hash] = fork_id
-                    current_hash = block_map[current_hash].get('previous_hash')
-                else:
-                    break
-            
-            fork_id += 1
-        
-        return forks
-    
-    def _calculate_positions(self, blocks, main_chain, forks):
-        """Calculate X,Y positions for all blocks.
-        
-        Args:
-            blocks: List of blocks
-            main_chain: Set of main chain hashes
-            forks: Fork mapping
+            branch_info: Branch assignment info
             
         Returns:
             dict: Hash to (x, y) position mapping
         """
         positions = {}
-        fork_offsets = {}
         
         for block in blocks:
             block_hash = block['hash']
@@ -156,31 +131,28 @@ class ChainDrawer:
             # X position based on index
             x = index * (self.BLOCK_WIDTH + self.HORIZONTAL_SPACING)
             
-            # Y position based on chain type
-            if block_hash in main_chain:
-                # Main chain at base level
-                y = self.BASE_Y
-            elif block.get('is_orphan'):
-                # Orphan blocks below main chain
-                y = self.BASE_Y + self.VERTICAL_SPACING * 2
+            # Y position based on branch
+            if block_hash in branch_info:
+                info = branch_info[block_hash]
+                y_offset = info['y_offset']
+                y = self.BASE_Y + (y_offset * self.VERTICAL_SPACING)
+                print(f"  Block #{index}: y_offset={y_offset}, y={y}, status={info['status']}")
             else:
-                # Fork blocks above main chain
-                fork_id = forks.get(block_hash, 0)
-                if fork_id not in fork_offsets:
-                    fork_offsets[fork_id] = len(fork_offsets) + 1
-                y = self.BASE_Y - self.VERTICAL_SPACING * fork_offsets[fork_id]
+                # Main chain (no fork data)
+                y = self.BASE_Y
             
             positions[block_hash] = (x, y)
         
         return positions
     
-    def _calculate_connections(self, blocks, positions, block_map):
-        """Calculate connection lines between blocks.
+    def _calculate_connections_with_forks(self, blocks, positions, block_map, branch_info):
+        """Calculate connection lines with fork-aware coloring.
         
         Args:
             blocks: List of blocks
             positions: Position mapping
             block_map: Hash to block mapping
+            branch_info: Branch assignment info
             
         Returns:
             list: List of connection line definitions
@@ -203,30 +175,36 @@ class ChainDrawer:
             from_pos = positions[prev_hash]
             to_pos = positions[curr_hash]
             
-            # Adjust for block dimensions (connect right edge to left edge)
+            # Adjust for block dimensions
             from_x = from_pos[0] + self.BLOCK_WIDTH
             from_y = from_pos[1] + self.BLOCK_HEIGHT / 2
             to_x = to_pos[0]
             to_y = to_pos[1] + self.BLOCK_HEIGHT / 2
             
-            # Determine line color
-            if block.get('is_orphan'):
-                color = self.ORPHAN_LINE_COLOR
-            elif curr_hash in positions and prev_hash in positions:
-                # Check if both blocks are at same Y level (main chain)
-                if abs(from_pos[1] - to_pos[1]) < 10:
-                    color = self.MAIN_CHAIN_COLOR
-                else:
-                    color = self.FORK_CHAIN_COLOR
+            # Determine line color and style based on branch status
+            status = branch_info.get(curr_hash, {}).get('status', 'main')
+            
+            if status == 'orphaned':
+                color = self.ORPHAN_CHAIN_COLOR
+                style = Qt.PenStyle.DashLine
+            elif status == 'winner':
+                color = self.WINNER_CHAIN_COLOR
+                style = Qt.PenStyle.SolidLine
+            elif status == 'active':
+                color = self.ACTIVE_FORK_COLOR
+                style = Qt.PenStyle.SolidLine
             else:
                 color = self.MAIN_CHAIN_COLOR
+                style = Qt.PenStyle.SolidLine
             
             connections.append({
                 'from': (from_x, from_y),
                 'to': (to_x, to_y),
                 'color': color,
+                'style': style,
                 'from_hash': prev_hash,
-                'to_hash': curr_hash
+                'to_hash': curr_hash,
+                'status': status
             })
         
         return connections
@@ -243,6 +221,7 @@ class ChainDrawer:
         from_pos = connection_info['from']
         to_pos = connection_info['to']
         color = connection_info['color']
+        style = connection_info.get('style', Qt.PenStyle.SolidLine)
         
         line = QGraphicsLineItem(
             from_pos[0], from_pos[1],
@@ -250,6 +229,7 @@ class ChainDrawer:
         )
         
         pen = QPen(color, 2)
+        pen.setStyle(style)
         line.setPen(pen)
         line.setZValue(-1)  # Draw behind blocks
         
@@ -275,7 +255,7 @@ class ChainDrawer:
         max_y = max(pos[1] for pos in positions) + self.BLOCK_HEIGHT
         
         # Add padding
-        padding = 50
+        padding = 100
         return (
             min_x - padding,
             min_y - padding,

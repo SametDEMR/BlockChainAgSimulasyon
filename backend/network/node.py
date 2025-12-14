@@ -325,6 +325,7 @@ class Node:
     def receive_block(self, block):
         """
         Başka bir node'dan blok al ve zincire ekle
+        Fork durumunu tespit eder ve alternatif zincirleri yönetir
         
         Args:
             block: Alınan blok
@@ -335,7 +336,18 @@ class Node:
         if not self.is_active:
             return False
         
-        return self.blockchain.add_block(block)
+        # Blok ekle (fork tespiti add_block içinde yapılıyor)
+        success = self.blockchain.add_block(block)
+        
+        # Eğer fork durumundaysa ve alternatif zincir varsa
+        # gelen bloğun alternatif zincire ait olup olmadığını kontrol et
+        if not success and self.blockchain.alternative_chains:
+            # Alternatif zincire eklemeyi dene
+            for idx in range(len(self.blockchain.alternative_chains)):
+                if self.blockchain.add_block_to_alternative_chain(block, idx):
+                    return True
+        
+        return success
     
     def sync_blockchain(self, other_chain):
         """

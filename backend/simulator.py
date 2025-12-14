@@ -134,10 +134,11 @@ class Simulator:
             # Regular node'lar için klasik mining
             active_regular = [n for n in self.regular_nodes if n.is_active]
             
-            # ✅ PARTITION KONTROLÜ - Her iki grupta ayrı mining
+            # ✅ PARTITION KONTROLÜ - Her iki grupta ayrı mining (FORK oluşturur)
             if self.message_broker.partition_active:
                 # Group A'dan miner seç
                 group_a_miners = [n for n in active_regular if n.id in self.message_broker.group_a_ids]
+                block_a = None
                 if group_a_miners:
                     miner_a = random.choice(group_a_miners)
                     block_a = miner_a.mine_block()
@@ -146,9 +147,11 @@ class Simulator:
                         for node in self.nodes:
                             if node.id in self.message_broker.group_a_ids and node != miner_a:
                                 node.receive_block(block_a)
+                        print(f"🟢 Group A mined block #{block_a.index} by {miner_a.id}")
                 
-                # Group B'den miner seç
+                # Group B'den miner seç (AYNI ANDA - fork oluşturur)
                 group_b_miners = [n for n in active_regular if n.id in self.message_broker.group_b_ids]
+                block_b = None
                 if group_b_miners:
                     miner_b = random.choice(group_b_miners)
                     block_b = miner_b.mine_block()
@@ -157,6 +160,20 @@ class Simulator:
                         for node in self.nodes:
                             if node.id in self.message_broker.group_b_ids and node != miner_b:
                                 node.receive_block(block_b)
+                        print(f"🔴 Group B mined block #{block_b.index} by {miner_b.id}")
+                
+                # ✅ ÖNEMLİ - Her iki grubu birbirine "göster" (fork tespiti için)
+                # Bu bloklar birbirine ulaşmaz ama fork tespit edilir
+                if block_a and block_b:
+                    # Her grup diğer grubun blokunu "duyar" ama kullanamaz
+                    # Bu sayede fork branch'leri oluşur
+                    for node in self.nodes:
+                        if node.id in self.message_broker.group_a_ids:
+                            # Group A node'ları Group B'nin blokunu fork olarak görür
+                            node.receive_block(block_b)
+                        elif node.id in self.message_broker.group_b_ids:
+                            # Group B node'ları Group A'nın blokunu fork olarak görür
+                            node.receive_block(block_a)
             else:
                 # Normal durum: Partition yoksa tek miner
                 if active_regular:
