@@ -9,6 +9,7 @@ from ui.widgets.blockchain_graph_widget import BlockchainGraphWidget
 from ui.widgets.block_item import BlockItem
 from ui.widgets.chain_drawer import ChainDrawer
 from ui.widgets.fork_status_widget import ForkStatusWidget
+from ui.widgets.merge_notification_widget import MergeNotificationWidget
 from ui.dialogs.block_detail_dialog import BlockDetailDialog
 
 
@@ -32,6 +33,7 @@ class BlockchainExplorerPage(QWidget):
         self.data_manager = data_manager
         self.chain_drawer = ChainDrawer()
         self.current_layout = None
+        self.notified_merges = set()  # Track shown merge notifications
         
         self._setup_ui()
         self._setup_connections()
@@ -48,6 +50,11 @@ class BlockchainExplorerPage(QWidget):
         self.fork_status_widget = ForkStatusWidget()
         self.fork_status_widget.setVisible(False)
         layout.addWidget(self.fork_status_widget)
+        
+        # Merge Notification Widget (initially hidden)
+        self.merge_notification_widget = MergeNotificationWidget()
+        self.merge_notification_widget.setVisible(False)
+        layout.addWidget(self.merge_notification_widget)
         
         # Control bar
         control_bar = self._create_control_bar()
@@ -165,10 +172,23 @@ class BlockchainExplorerPage(QWidget):
         total_forks = 0
         total_orphaned = 0
         
+        # Check for resolved merges
         for node_status in fork_statuses:
             fs = node_status.get('fork_status', {})
             total_forks += fs.get('fork_events_count', 0)
             total_orphaned += fs.get('orphaned_blocks_count', 0)
+            
+            # Check fork history for resolved merges
+            fork_history = fs.get('fork_history', [])
+            for fork_event in fork_history:
+                if fork_event.get('resolved', False):
+                    # Create unique ID for this merge event
+                    merge_id = f"{fork_event.get('timestamp', 0)}_{fork_event.get('fork_point', 0)}"
+                    
+                    # Show notification only once
+                    if merge_id not in self.notified_merges:
+                        self.notified_merges.add(merge_id)
+                        self._show_merge_notification(fork_event)
         
         # Update stats labels
         self.lbl_forks.setText(f"Forks: {total_forks}")
@@ -261,6 +281,18 @@ class BlockchainExplorerPage(QWidget):
         self.lbl_pending_tx.setText(f"Pending TX: {pending_tx}")
         self.lbl_orphan_blocks.setText(f"Orphan Blocks: {orphan_blocks}")
     
+    def _show_merge_notification(self, fork_event):
+        """Show merge notification.
+        
+        Args:
+            fork_event: Fork event data with resolved=True
+        """
+        winner_length = fork_event.get('incoming_chain_length', 0)
+        loser_length = fork_event.get('current_chain_length', 0)
+        orphaned_blocks = loser_length - fork_event.get('fork_point', 0)
+        
+        self.merge_notification_widget.show_merge(winner_length, loser_length, orphaned_blocks)
+    
     def clear_display(self):
         """Clear all displays and reset to initial state."""
         self.lbl_total_blocks.setText("Total Blocks: 0")
@@ -270,6 +302,8 @@ class BlockchainExplorerPage(QWidget):
         
         self.graph_widget.clear_blocks()
         self.fork_status_widget._clear_display()
+        self.merge_notification_widget.hide_notification()
+        self.notified_merges.clear()
         
         self.chk_show_genesis.setChecked(True)
         self.chk_show_normal.setChecked(True)

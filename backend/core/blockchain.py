@@ -263,31 +263,32 @@ class Blockchain:
             return True
         
         return False
-    
+
     def resolve_fork(self, incoming_chain):
-        """
-        Fork çözümle - en uzun zincir kuralı
-        
-        Args:
-            incoming_chain (list): Rakip zincir
-            
-        Returns:
-            bool: Zincir değişti mi?
-        """
+        """Fork çözümle - en uzun zincir kuralı"""
         # En uzun zincir kazanır
         if len(incoming_chain) > len(self.chain):
             # Mevcut zinciri yedeğe al
             orphaned = self.chain.copy()
             self.orphaned_blocks.extend(orphaned)
-            
+
             # Yeni zinciri kabul et
             self.chain = incoming_chain
             self.fork_detected = False
-            
+
+            # ✅ EKLE - Fork history'deki son event'i resolved yap
+            if self.fork_history:
+                self.fork_history[-1]['resolved'] = True
+
             print(f"✅ Fork resolved: Longer chain accepted ({len(incoming_chain)} blocks)")
             return True
-        
+
         print(f"⚠️  Fork resolved: Current chain kept ({len(self.chain)} blocks)")
+
+        # ✅ EKLE - Mevcut zincir kazandıysa da resolved işaretle
+        if self.fork_history:
+            self.fork_history[-1]['resolved'] = True
+
         return False
     
     def add_alternative_chain(self, chain):
