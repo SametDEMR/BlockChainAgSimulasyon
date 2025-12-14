@@ -126,43 +126,55 @@ class MetricsWidget(QWidget):
         """Create network health bars section."""
         group = QGroupBox("Network Health")
         layout = QVBoxLayout(group)
-        layout.setSpacing(10)
+        layout.setSpacing(8)
         
         # Overall health
-        overall_layout = QHBoxLayout()
-        overall_label = QLabel("Overall:")
-        overall_label.setMinimumWidth(100)
+        overall_widget = QWidget()
+        overall_layout = QVBoxLayout(overall_widget)
+        overall_layout.setContentsMargins(5, 2, 5, 2)
+        overall_label = QLabel("Overall")
+        overall_label.setAlignment(Qt.AlignCenter)
+        overall_label.setStyleSheet("font-size: 11px;")
         self.overall_health = QProgressBar()
         self.overall_health.setRange(0, 100)
         self.overall_health.setValue(0)
         self.overall_health.setFormat("%p%")
+        self.overall_health.setFixedHeight(25)
         overall_layout.addWidget(overall_label)
         overall_layout.addWidget(self.overall_health)
-        layout.addLayout(overall_layout)
+        layout.addWidget(overall_widget)
         
         # Validators health
-        validators_layout = QHBoxLayout()
-        validators_label = QLabel("Validators:")
-        validators_label.setMinimumWidth(100)
+        validators_widget = QWidget()
+        validators_layout = QVBoxLayout(validators_widget)
+        validators_layout.setContentsMargins(5, 2, 5, 2)
+        validators_label = QLabel("Validators")
+        validators_label.setAlignment(Qt.AlignCenter)
+        validators_label.setStyleSheet("font-size: 11px;")
         self.validators_health = QProgressBar()
         self.validators_health.setRange(0, 100)
         self.validators_health.setValue(0)
         self.validators_health.setFormat("%p%")
+        self.validators_health.setFixedHeight(25)
         validators_layout.addWidget(validators_label)
         validators_layout.addWidget(self.validators_health)
-        layout.addLayout(validators_layout)
+        layout.addWidget(validators_widget)
         
         # Regular nodes health
-        regular_layout = QHBoxLayout()
-        regular_label = QLabel("Regular:")
-        regular_label.setMinimumWidth(100)
+        regular_widget = QWidget()
+        regular_layout = QVBoxLayout(regular_widget)
+        regular_layout.setContentsMargins(5, 2, 5, 2)
+        regular_label = QLabel("Regular")
+        regular_label.setAlignment(Qt.AlignCenter)
+        regular_label.setStyleSheet("font-size: 11px;")
         self.regular_health = QProgressBar()
         self.regular_health.setRange(0, 100)
         self.regular_health.setValue(0)
         self.regular_health.setFormat("%p%")
+        self.regular_health.setFixedHeight(25)
         regular_layout.addWidget(regular_label)
         regular_layout.addWidget(self.regular_health)
-        layout.addLayout(regular_layout)
+        layout.addWidget(regular_widget)
         
         # Style progress bars
         self._style_progress_bars()
@@ -212,7 +224,7 @@ class MetricsWidget(QWidget):
                 background-color: #2D2D2D;
                 text-align: center;
                 color: #E0E0E0;
-                height: 20px;
+                height: 25px;
             }
             QProgressBar::chunk {
                 background-color: #4CAF50;

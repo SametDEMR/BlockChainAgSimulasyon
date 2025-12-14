@@ -183,79 +183,58 @@ class DashboardPage(QWidget):
         return panel
 
     def _create_overview_group(self):
-        """Create overview cards (Total Nodes, Active Nodes, Chain Length, Health)."""
+        """Create overview cards (Total Nodes, Active Nodes, Chain Length)."""
         group = QGroupBox("Overview")
         layout = QVBoxLayout(group)
-
-        # Row 1: Total Nodes + Active Nodes
-        row1 = QHBoxLayout()
+        layout.setSpacing(5)
 
         # Total Nodes
         total_widget = QWidget()
         total_layout = QVBoxLayout(total_widget)
-        total_layout.setContentsMargins(5, 5, 5, 5)
+        total_layout.setContentsMargins(5, 2, 5, 2)
         total_label = QLabel("Total Nodes")
         total_label.setAlignment(Qt.AlignCenter)
+        total_label.setStyleSheet("font-size: 11px;")
         self.lcd_total_nodes = QLCDNumber()
         self.lcd_total_nodes.setSegmentStyle(QLCDNumber.Flat)
         self.lcd_total_nodes.setDigitCount(3)
-        self.lcd_total_nodes.setFixedHeight(50)
+        self.lcd_total_nodes.setFixedHeight(35)
         self.lcd_total_nodes.display(0)
         total_layout.addWidget(total_label)
         total_layout.addWidget(self.lcd_total_nodes)
-        row1.addWidget(total_widget)
+        layout.addWidget(total_widget)
 
         # Active Nodes
         active_widget = QWidget()
         active_layout = QVBoxLayout(active_widget)
-        active_layout.setContentsMargins(5, 5, 5, 5)
+        active_layout.setContentsMargins(5, 2, 5, 2)
         active_label = QLabel("Active Nodes")
         active_label.setAlignment(Qt.AlignCenter)
+        active_label.setStyleSheet("font-size: 11px;")
         self.lcd_active_nodes = QLCDNumber()
         self.lcd_active_nodes.setSegmentStyle(QLCDNumber.Flat)
         self.lcd_active_nodes.setDigitCount(3)
-        self.lcd_active_nodes.setFixedHeight(50)
+        self.lcd_active_nodes.setFixedHeight(35)
         self.lcd_active_nodes.display(0)
         active_layout.addWidget(active_label)
         active_layout.addWidget(self.lcd_active_nodes)
-        row1.addWidget(active_widget)
-
-        layout.addLayout(row1)
-
-        # Row 2: Chain Length + Network Health
-        row2 = QHBoxLayout()
+        layout.addWidget(active_widget)
 
         # Chain Length
         chain_widget = QWidget()
         chain_layout = QVBoxLayout(chain_widget)
-        chain_layout.setContentsMargins(5, 5, 5, 5)
+        chain_layout.setContentsMargins(5, 2, 5, 2)
         chain_label = QLabel("Chain Length")
         chain_label.setAlignment(Qt.AlignCenter)
+        chain_label.setStyleSheet("font-size: 11px;")
         self.lcd_chain_length = QLCDNumber()
         self.lcd_chain_length.setSegmentStyle(QLCDNumber.Flat)
         self.lcd_chain_length.setDigitCount(3)
-        self.lcd_chain_length.setFixedHeight(50)
+        self.lcd_chain_length.setFixedHeight(35)
         self.lcd_chain_length.display(0)
         chain_layout.addWidget(chain_label)
         chain_layout.addWidget(self.lcd_chain_length)
-        row2.addWidget(chain_widget)
-
-        # Network Health %
-        health_widget = QWidget()
-        health_layout = QVBoxLayout(health_widget)
-        health_layout.setContentsMargins(5, 5, 5, 5)
-        health_label = QLabel("Health")
-        health_label.setAlignment(Qt.AlignCenter)
-        self.health_bar_overview = QProgressBar()
-        self.health_bar_overview.setRange(0, 100)
-        self.health_bar_overview.setValue(0)
-        self.health_bar_overview.setFormat("%v%")
-        self.health_bar_overview.setFixedHeight(50)
-        health_layout.addWidget(health_label)
-        health_layout.addWidget(self.health_bar_overview)
-        row2.addWidget(health_widget)
-
-        layout.addLayout(row2)
+        layout.addWidget(chain_widget)
 
         return group
 
@@ -274,11 +253,6 @@ class DashboardPage(QWidget):
         self.lcd_total_nodes.display(total_nodes)
         self.lcd_active_nodes.display(active_nodes)
 
-        # Calculate health
-        if total_nodes > 0:
-            health = int((active_nodes / total_nodes) * 100)
-            self.health_bar_overview.setValue(health)
-
     def _on_nodes_updated(self, nodes):
         """Handle nodes update."""
         if not nodes:
@@ -289,11 +263,6 @@ class DashboardPage(QWidget):
 
         self.lcd_total_nodes.display(total)
         self.lcd_active_nodes.display(active)
-
-        # Update health
-        if total > 0:
-            health = int((active / total) * 100)
-            self.health_bar_overview.setValue(health)
 
     def _on_blockchain_updated(self, blockchain):
         """Handle blockchain update."""
@@ -309,4 +278,3 @@ class DashboardPage(QWidget):
         self.lcd_total_nodes.display(0)
         self.lcd_active_nodes.display(0)
         self.lcd_chain_length.display(0)
-        self.health_bar_overview.setValue(0)
