@@ -72,6 +72,12 @@ class PBFTWidget(QWidget):
         self.message_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.message_table.horizontalHeader().setStretchLastSection(True)
         
+        # Enable scrolling
+        from PySide6.QtWidgets import QSizePolicy
+        self.message_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.message_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.message_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        
         # Column widths
         header = self.message_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # Time

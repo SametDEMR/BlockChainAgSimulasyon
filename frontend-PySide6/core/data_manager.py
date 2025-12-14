@@ -126,9 +126,28 @@ class DataManager(QObject):
 
             messages = self.api_client.get_network_messages()
             if messages and 'error' not in messages:
-                msg_list = messages.get('messages', [])
-                self._cache['messages'] = msg_list
-                self.messages_updated.emit(msg_list)
+                raw_messages = messages.get('recent_messages', [])
+                
+                # Transform to widget format
+                transformed = []
+                for msg in raw_messages:
+                    # Extract view from content.pbft_message
+                    view = 0
+                    content = msg.get('content', {})
+                    pbft_msg = content.get('pbft_message', {})
+                    if pbft_msg:
+                        view = pbft_msg.get('view', 0)
+                    
+                    transformed.append({
+                        'timestamp': msg.get('timestamp', ''),
+                        'sender': msg.get('sender_id', ''),
+                        'receiver': msg.get('receiver_id', ''),
+                        'type': msg.get('message_type', '').upper(),  # Uppercase for display
+                        'view': view
+                    })
+                
+                self._cache['messages'] = transformed
+                self.messages_updated.emit(transformed)
 
             fork_status = self.api_client.get_fork_status()
             if fork_status and 'error' not in fork_status:

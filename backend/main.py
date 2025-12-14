@@ -149,7 +149,7 @@ async def get_network_messages():
         "pbft_messages": len(pbft_messages),
         "message_types": message_types,
         "broker_stats": simulator.message_broker.get_stats(),
-        "recent_messages": pbft_messages[:20]
+        "recent_messages": pbft_messages[-100:]  # Son 100 mesaj
     }
 
 
