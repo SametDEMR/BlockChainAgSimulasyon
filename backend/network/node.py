@@ -92,7 +92,6 @@ class Node:
         # Bakiye kontrolü (basitleştirilmiş)
         balance = self.blockchain.get_balance(self.wallet.address)
         if balance < amount:
-            print(f"Node {self.id}: Insufficient balance ({balance} < {amount})")
             return None
         
         # Transaction oluştur ve imzala
@@ -218,7 +217,6 @@ class Node:
                 content={'pbft_message': prepare_msg.to_dict()},
                 exclude_sender=False
             )
-            print(f"Node {self.id} sent PREPARE (trust: {self.trust_score})")
     
     async def _handle_prepare(self, message):
         """Prepare mesajını işle"""
@@ -252,7 +250,6 @@ class Node:
                 content={'pbft_message': commit_msg.to_dict()},
                 exclude_sender=False
             )
-            print(f"Node {self.id} sent COMMIT (trust: {self.trust_score})")
     
     async def _handle_commit(self, message):
         """Commit mesajını işle"""
@@ -285,9 +282,8 @@ class Node:
                 if block:
                     self.blocks_mined += 1
                     self.total_earned += self.blockchain.mining_reward
-                    print(f"✅ Node {self.id} added block #{block.index} after CONSENSUS! (trust: {self.trust_score})")
             else:
-                print(f"Node {self.id} reached CONSENSUS! (trust: {self.trust_score})")
+                pass
     
     def mine_block(self):
         """
@@ -318,7 +314,6 @@ class Node:
         if block:
             self.blocks_mined += 1
             self.total_earned += self.blockchain.mining_reward
-            print(f"Node {self.id} ({self.role}) mined block #{block.index}")
         
         return block
     
@@ -358,7 +353,6 @@ class Node:
         """
         if len(other_chain.chain) > len(self.blockchain.chain) and other_chain.is_valid():
             self.blockchain.chain = other_chain.chain.copy()
-            print(f"Node {self.id} synced blockchain (new length: {len(self.blockchain.chain)})")
     
     def get_metrics(self):
         """
@@ -473,7 +467,6 @@ class Node:
             self.blockchain = self.private_chain
             self.private_chain = old_public
             
-            print(f"🔴 Node {self.id} REVEALED private chain ({private_length} blocks > {public_length} public blocks)")
             return True
         
         return False
@@ -489,7 +482,6 @@ class Node:
             self.private_chain = Blockchain()
             self.private_chain.chain = [block for block in self.blockchain.chain]
             self.private_chain.pending_transactions = []
-            print(f"🟠 Node {self.id} started SELFISH MINING")
     
     def stop_selfish_mining(self):
         """
@@ -499,7 +491,6 @@ class Node:
         if self.is_selfish_miner:
             self.is_selfish_miner = False
             self.private_chain = None
-            print(f"🟢 Node {self.id} stopped SELFISH MINING")
     
     def __repr__(self):
         return f"Node({self.id} | {self.role} | {self.status})"

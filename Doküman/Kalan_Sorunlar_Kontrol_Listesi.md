@@ -56,5 +56,3 @@ http://localhost:8000/blockchain
 
 optimizasyon ile ilgili bazı problemler var bunlar kontrol edilecek. Düzenlemeler yapılacak.
 Zİncir uzunluğunun 2den 9a 9dan 16ya anında fırlaması gibi.
-BAckend konsol çıktıları azaltılabilir.
-PBFT mesaj çıktısı hala gözükmüyor.

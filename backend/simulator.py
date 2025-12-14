@@ -113,21 +113,10 @@ class Simulator:
                         primary = validator
                         break
                 
-                # DEBUG: Primary kontrolü
-                if primary:
-                    print(f"✅ PRIMARY FOUND: {primary.id}")
-                else:
-                    print(f"❌ NO PRIMARY! Validator count: {len(self.validator_nodes)}")
-                    for v in self.validator_nodes:
-                        if v.pbft:
-                            print(f"  - {v.id}: is_primary={v.pbft.is_primary()}, view={v.pbft.view}")
-                
                 if primary:
                     # Primary blok önerir
                     try:
                         block = await primary.propose_block()
-                        if block:
-                            print(f"✓ Primary {primary.id} proposed block via PBFT")
                     except Exception as e:
                         print(f"⚠️  Error in block proposal: {e}")
             
@@ -147,7 +136,6 @@ class Simulator:
                         for node in self.nodes:
                             if node.id in self.message_broker.group_a_ids and node != miner_a:
                                 node.receive_block(block_a)
-                        print(f"🟢 Group A mined block #{block_a.index} by {miner_a.id}")
                 
                 # Group B'den miner seç (AYNI ANDA - fork oluşturur)
                 group_b_miners = [n for n in active_regular if n.id in self.message_broker.group_b_ids]
@@ -160,7 +148,6 @@ class Simulator:
                         for node in self.nodes:
                             if node.id in self.message_broker.group_b_ids and node != miner_b:
                                 node.receive_block(block_b)
-                        print(f"🔴 Group B mined block #{block_b.index} by {miner_b.id}")
                 
                 # ✅ ÖNEMLİ - Her iki grubu birbirine "göster" (fork tespiti için)
                 # Bu bloklar birbirine ulaşmaz ama fork tespit edilir

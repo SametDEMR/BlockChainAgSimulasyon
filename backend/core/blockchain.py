@@ -336,7 +336,6 @@ class Blockchain:
         if alt_chain and block.previous_hash == alt_chain[-1].hash:
             alt_chain.append(block)
             alt_chain_data['length'] = len(alt_chain)
-            print(f"🟠 Block added to alternative chain #{chain_index} (length: {len(alt_chain)})")
             return True
         
         return False
