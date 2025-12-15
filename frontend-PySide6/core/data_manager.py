@@ -110,8 +110,16 @@ class DataManager(QObject):
 
             pbft = self.api_client.get_pbft_status()
             if pbft and 'error' not in pbft:
-                self._cache['pbft'] = pbft
-                self.pbft_updated.emit(pbft)
+                # Transform to widget format
+                transformed_pbft = {
+                    'primary': pbft.get('primary', 'N/A'),
+                    'view': pbft.get('current_view', 0),
+                    'consensus_count': pbft.get('total_consensus_reached', 0),
+                    'validator_count': pbft.get('total_validators', 0),
+                    'total_messages': pbft.get('total_messages', 0)
+                }
+                self._cache['pbft'] = transformed_pbft
+                self.pbft_updated.emit(transformed_pbft)
 
             metrics = self.api_client.get_metrics()
             if metrics and 'error' not in metrics:

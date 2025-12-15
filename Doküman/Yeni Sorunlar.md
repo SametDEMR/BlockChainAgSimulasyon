@@ -4,10 +4,6 @@
 ⚠️ Fork Detection Status normal çalışma sırasında bile aktif
 ⚠️ Ne zaman çalışması gerektiğini belirlenmeli (sadece fork durumunda)
 
-5. PBFT Güncelleme Sorunu
-
-⚠️ PBFT Messages tabındaki PBFT-STATUS güncellenmemiyor
-
 6. Sybil Attack Hatası
 
 🔴 Sybil Attack çalışınca: 'dict' object has no attribute 'to_dict' hatası
