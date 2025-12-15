@@ -47,7 +47,7 @@ class Attack:
         """Attack nesnesini dict'e çevir (progress hesaplamalı)"""
         result = {
             'attack_id': self.attack_id,
-            'attack_type': self.attack_type,
+            'attack_type': self.attack_type.value,  # FIX: enum.value kullan
             'target': self.target,
             'parameters': self.parameters,
             'status': self.status.value,
