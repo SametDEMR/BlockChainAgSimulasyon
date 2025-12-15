@@ -72,9 +72,7 @@ class MetricsWidget(QWidget):
         self.health_section = self._create_health_section()
         self.content_layout.addWidget(self.health_section)
         
-        # 4. System Metrics Section
-        self.metrics_section = self._create_metrics_section()
-        self.content_layout.addWidget(self.metrics_section)
+        # System Metrics section REMOVED (not important)
         
         self.content_layout.addStretch()
         
@@ -109,17 +107,13 @@ class MetricsWidget(QWidget):
     
     def _create_cards_section(self):
         """Create node status cards section."""
-        # Just create the grid, don't add to any parent layout
-        # Dashboard will handle adding it
+        # Grid with 4 columns for wide layout (spanning 2 columns in dashboard)
         self.cards_grid = QGridLayout()
         self.cards_grid.setSpacing(10)
-        self.cards_grid.setColumnStretch(0, 1)
-        self.cards_grid.setColumnStretch(1, 1)
+        for i in range(4):
+            self.cards_grid.setColumnStretch(i, 1)
         
-        # Dictionary to store card widgets
-        self.status_cards = {}  # {node_id: NodeStatusCard}
-        
-        # Return None since we're not creating a section widget
+        self.status_cards = {}
         return None
     
     def _create_health_section(self):
@@ -131,15 +125,15 @@ class MetricsWidget(QWidget):
         # Overall health
         overall_widget = QWidget()
         overall_layout = QVBoxLayout(overall_widget)
-        overall_layout.setContentsMargins(5, 2, 5, 2)
+        overall_layout.setContentsMargins(5, 1, 5, 1)
         overall_label = QLabel("Overall")
         overall_label.setAlignment(Qt.AlignCenter)
-        overall_label.setStyleSheet("font-size: 11px;")
+        overall_label.setStyleSheet("font-size: 10px;")
         self.overall_health = QProgressBar()
         self.overall_health.setRange(0, 100)
         self.overall_health.setValue(0)
         self.overall_health.setFormat("%p%")
-        self.overall_health.setFixedHeight(25)
+        self.overall_health.setFixedHeight(20)  # Reduced height
         overall_layout.addWidget(overall_label)
         overall_layout.addWidget(self.overall_health)
         layout.addWidget(overall_widget)
@@ -147,15 +141,15 @@ class MetricsWidget(QWidget):
         # Validators health
         validators_widget = QWidget()
         validators_layout = QVBoxLayout(validators_widget)
-        validators_layout.setContentsMargins(5, 2, 5, 2)
+        validators_layout.setContentsMargins(5, 1, 5, 1)
         validators_label = QLabel("Validators")
         validators_label.setAlignment(Qt.AlignCenter)
-        validators_label.setStyleSheet("font-size: 11px;")
+        validators_label.setStyleSheet("font-size: 10px;")
         self.validators_health = QProgressBar()
         self.validators_health.setRange(0, 100)
         self.validators_health.setValue(0)
         self.validators_health.setFormat("%p%")
-        self.validators_health.setFixedHeight(25)
+        self.validators_health.setFixedHeight(20)  # Reduced height
         validators_layout.addWidget(validators_label)
         validators_layout.addWidget(self.validators_health)
         layout.addWidget(validators_widget)
@@ -163,15 +157,15 @@ class MetricsWidget(QWidget):
         # Regular nodes health
         regular_widget = QWidget()
         regular_layout = QVBoxLayout(regular_widget)
-        regular_layout.setContentsMargins(5, 2, 5, 2)
+        regular_layout.setContentsMargins(5, 1, 5, 1)
         regular_label = QLabel("Regular")
         regular_label.setAlignment(Qt.AlignCenter)
-        regular_label.setStyleSheet("font-size: 11px;")
+        regular_label.setStyleSheet("font-size: 10px;")
         self.regular_health = QProgressBar()
         self.regular_health.setRange(0, 100)
         self.regular_health.setValue(0)
         self.regular_health.setFormat("%p%")
-        self.regular_health.setFixedHeight(25)
+        self.regular_health.setFixedHeight(20)  # Reduced height
         regular_layout.addWidget(regular_label)
         regular_layout.addWidget(self.regular_health)
         layout.addWidget(regular_widget)
@@ -273,25 +267,13 @@ class MetricsWidget(QWidget):
     
     @Slot(dict)
     def update_metrics(self, metrics):
-        """Update system metrics display.
+        """Update system metrics display - REMOVED (not needed anymore).
         
         Args:
             metrics: Dictionary with system metrics
         """
-        if not metrics:
-            return
-        
-        # Update blocks per minute
-        blocks_per_min = metrics.get('blocks_per_minute', 0)
-        self.blocks_per_min.setText(str(blocks_per_min))
-        
-        # Update TX per second
-        tx_per_sec = metrics.get('transactions_per_second', 0.0)
-        self.tx_per_sec.setText(f"{tx_per_sec:.1f}")
-        
-        # Update average block time
-        avg_block_time = metrics.get('average_block_time', 0.0)
-        self.avg_block_time.setText(f"{avg_block_time:.1f}s")
+        # System metrics removed from UI
+        pass
     
     @Slot(list)
     def update_response_time_graph(self, nodes):
@@ -352,9 +334,9 @@ class MetricsWidget(QWidget):
                 card = NodeStatusCard(node_id)
                 self.status_cards[node_id] = card
                 
-                # Add to grid (2 columns)
-                row = i // 2
-                col = i % 2
+                # Add to grid (4 columns for wide layout)
+                row = i // 4
+                col = i % 4
                 self.cards_grid.addWidget(card, row, col)
             
             # Update card data
@@ -365,9 +347,7 @@ class MetricsWidget(QWidget):
         self.overall_health.setValue(0)
         self.validators_health.setValue(0)
         self.regular_health.setValue(0)
-        self.blocks_per_min.setText("0")
-        self.tx_per_sec.setText("0.0")
-        self.avg_block_time.setText("0.0s")
+        # System metrics widgets removed
         
         # Clear graph data
         self.response_time_data.clear()

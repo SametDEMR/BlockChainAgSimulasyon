@@ -22,7 +22,7 @@ class BlockItem(QGraphicsRectItem):
             block_data: Dictionary containing block information
             parent: Parent item
         """
-        super().__init__(0, 0, 100, 80, parent)
+        super().__init__(0, 0, 140, 120, parent)  # Larger block: 140x120
         
         self.block_data = block_data
         self._signal_proxy = BlockItemSignalProxy()
@@ -30,8 +30,11 @@ class BlockItem(QGraphicsRectItem):
         # Extract block info
         self.index = block_data.get('index', 0)
         self.hash = block_data.get('hash', 'N/A')[:8]  # First 8 chars
+        self.prev_hash = block_data.get('previous_hash', 'N/A')[:8]
         self.miner = block_data.get('miner_id', 'N/A')
         self.tx_count = block_data.get('transaction_count', 0)
+        self.timestamp = block_data.get('timestamp', 'N/A')
+        self.nonce = block_data.get('nonce', 0)
         self.block_type = self._determine_block_type(block_data)
         
         # Setup appearance
@@ -73,46 +76,60 @@ class BlockItem(QGraphicsRectItem):
         self.setPen(QPen(Qt.black, 2))
     
     def _create_content(self):
-        """Create text content inside block."""
+        """Create text content inside block - showing all data."""
+        y_pos = 5  # Starting Y position
+        
         # Index (large, centered at top)
-        self.index_text = QGraphicsTextItem(str(self.index), self)
-        font = QFont("Arial", 16, QFont.Bold)
+        self.index_text = QGraphicsTextItem(f"Block {self.index}", self)
+        font = QFont("Arial", 12, QFont.Bold)
         self.index_text.setFont(font)
         self.index_text.setDefaultTextColor(Qt.white)
-        
-        # Center index text
         index_rect = self.index_text.boundingRect()
-        x = (100 - index_rect.width()) / 2
-        self.index_text.setPos(x, 5)
+        x = (140 - index_rect.width()) / 2
+        self.index_text.setPos(x, y_pos)
+        y_pos += 20
         
-        # Hash (smaller, below index)
-        self.hash_text = QGraphicsTextItem(f"#{self.hash}", self)
-        font = QFont("Courier", 8)
+        # Hash
+        self.hash_text = QGraphicsTextItem(f"Hash: {self.hash}", self)
+        font = QFont("Courier", 7)
         self.hash_text.setFont(font)
         self.hash_text.setDefaultTextColor(Qt.white)
+        self.hash_text.setPos(5, y_pos)
+        y_pos += 15
         
-        # Center hash text
-        hash_rect = self.hash_text.boundingRect()
-        x = (100 - hash_rect.width()) / 2
-        self.hash_text.setPos(x, 30)
+        # Previous Hash
+        self.prev_hash_text = QGraphicsTextItem(f"Prev: {self.prev_hash}", self)
+        font = QFont("Courier", 7)
+        self.prev_hash_text.setFont(font)
+        self.prev_hash_text.setDefaultTextColor(Qt.white)
+        self.prev_hash_text.setPos(5, y_pos)
+        y_pos += 15
         
-        # Miner (smaller, below hash)
-        self.miner_text = QGraphicsTextItem(f"M:{self.miner[:6]}", self)
+        # Miner
+        self.miner_text = QGraphicsTextItem(f"Miner: {self.miner[:8]}", self)
         font = QFont("Arial", 7)
         self.miner_text.setFont(font)
         self.miner_text.setDefaultTextColor(Qt.white)
-        self.miner_text.setPos(5, 50)
+        self.miner_text.setPos(5, y_pos)
+        y_pos += 15
         
-        # TX count (smaller, bottom right)
-        self.tx_text = QGraphicsTextItem(f"TX:{self.tx_count}", self)
+        # TX count and Nonce
+        self.tx_text = QGraphicsTextItem(f"TX: {self.tx_count} | Nonce: {self.nonce}", self)
         font = QFont("Arial", 7)
         self.tx_text.setFont(font)
         self.tx_text.setDefaultTextColor(Qt.white)
+        self.tx_text.setPos(5, y_pos)
+        y_pos += 15
         
-        # Right align TX count
-        tx_rect = self.tx_text.boundingRect()
-        x = 95 - tx_rect.width()
-        self.tx_text.setPos(x, 50)
+        # Timestamp (truncated if needed)
+        timestamp_str = str(self.timestamp)
+        if len(timestamp_str) > 18:
+            timestamp_str = timestamp_str[:18]
+        self.time_text = QGraphicsTextItem(f"Time: {timestamp_str}", self)
+        font = QFont("Arial", 6)
+        self.time_text.setFont(font)
+        self.time_text.setDefaultTextColor(Qt.white)
+        self.time_text.setPos(5, y_pos)
     
     def _setup_tooltip(self):
         """Setup hover tooltip with full block details."""
@@ -184,18 +201,27 @@ class BlockItem(QGraphicsRectItem):
         self.block_data = block_data
         self.index = block_data.get('index', 0)
         self.hash = block_data.get('hash', 'N/A')[:8]
+        self.prev_hash = block_data.get('previous_hash', 'N/A')[:8]
         self.miner = block_data.get('miner_id', 'N/A')
         self.tx_count = block_data.get('transaction_count', 0)
+        self.timestamp = block_data.get('timestamp', 'N/A')
+        self.nonce = block_data.get('nonce', 0)
         self.block_type = self._determine_block_type(block_data)
         
         # Update appearance
         self._setup_appearance()
         
         # Update text content
-        self.index_text.setPlainText(str(self.index))
-        self.hash_text.setPlainText(f"#{self.hash}")
-        self.miner_text.setPlainText(f"M:{self.miner[:6]}")
-        self.tx_text.setPlainText(f"TX:{self.tx_count}")
+        self.index_text.setPlainText(f"Block {self.index}")
+        self.hash_text.setPlainText(f"Hash: {self.hash}")
+        self.prev_hash_text.setPlainText(f"Prev: {self.prev_hash}")
+        self.miner_text.setPlainText(f"Miner: {self.miner[:8]}")
+        self.tx_text.setPlainText(f"TX: {self.tx_count} | Nonce: {self.nonce}")
+        
+        timestamp_str = str(self.timestamp)
+        if len(timestamp_str) > 18:
+            timestamp_str = timestamp_str[:18]
+        self.time_text.setPlainText(f"Time: {timestamp_str}")
         
         # Update tooltip
         self._setup_tooltip()

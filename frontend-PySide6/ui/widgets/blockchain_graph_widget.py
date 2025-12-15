@@ -42,9 +42,9 @@ class BlockchainGraphWidget(QGraphicsView):
         self.setRenderHint(QPainter.Antialiasing)
         self.setRenderHint(QPainter.SmoothPixmapTransform)
         
-        # Horizontal scrolling enabled, vertical less important
+        # Horizontal scrolling only, no vertical
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         
         # Drag mode - allow panning with hand drag
         self.setDragMode(QGraphicsView.ScrollHandDrag)
@@ -53,25 +53,32 @@ class BlockchainGraphWidget(QGraphicsView):
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.AnchorViewCenter)
         
-        # Scene rect will be set when blocks are added
-        self.setSceneRect(0, 0, 2000, 600)
+        # Scene rect - fixed height, wide width for horizontal scrolling
+        self.setSceneRect(0, -300, 2000, 600)  # Centered vertically
         
-        # Background color - white for visibility
+        # Background color
         self.setBackgroundBrush(QBrush(QColor("#F5F5F5")))
+        
+        # Disable vertical scrolling programmatically
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
     
     def wheelEvent(self, event: QWheelEvent):
-        """Handle mouse wheel for zooming.
+        """Handle mouse wheel - convert to horizontal scrolling.
         
         Args:
             event: Wheel event
         """
-        # Get wheel delta
+        # Convert vertical wheel movement to horizontal scroll
         delta = event.angleDelta().y()
         
-        if delta > 0:
-            self.zoom_in()
-        else:
-            self.zoom_out()
+        # Get horizontal scrollbar
+        h_scrollbar = self.horizontalScrollBar()
+        
+        # Scroll horizontally (negative delta = right, positive = left)
+        h_scrollbar.setValue(h_scrollbar.value() - delta)
+        
+        # Accept event to prevent default behavior
+        event.accept()
     
     def zoom_in(self):
         """Zoom in the view."""
@@ -142,18 +149,18 @@ class BlockchainGraphWidget(QGraphicsView):
         self.scene.addItem(line_item)
     
     def update_scene_rect(self, blocks_count=0):
-        """Update scene rect based on number of blocks.
+        """Update scene rect based on number of blocks - centered vertically.
         
         Args:
             blocks_count: Number of blocks to accommodate
         """
         if blocks_count > 0:
-            # Each block is ~120px wide (100px + 20px spacing)
-            width = max(2000, blocks_count * 120 + 200)
-            height = 600  # Fixed height for now
-            self.setSceneRect(0, 0, width, height)
+            # Each block is ~170px wide (140px + 30px spacing)
+            width = max(2000, blocks_count * 170 + 200)
+            # Fixed height, centered at 0
+            self.setSceneRect(0, -300, width, 600)
         else:
-            self.setSceneRect(0, 0, 2000, 600)
+            self.setSceneRect(0, -300, 2000, 600)
     
     def get_zoom_level(self):
         """Get current zoom level.

@@ -87,6 +87,27 @@ class PBFTWidget(QWidget):
         header.setSectionResizeMode(4, QHeaderView.ResizeToContents)  # View
         
         traffic_layout.addWidget(self.message_table)
+        
+        # Color legend for message types
+        legend_layout = QHBoxLayout()
+        legend_layout.addWidget(QLabel("Message Types:"))
+        legend_layout.addSpacing(10)
+        
+        for msg_type, color in self.MESSAGE_COLORS.items():
+            # Create colored box
+            color_label = QLabel("■")  # Square character
+            color_label.setStyleSheet(f"color: {color}; font-size: 16px;")
+            # Type label
+            type_label = QLabel(msg_type.replace('_', '-'))
+            type_label.setStyleSheet("font-size: 11px;")
+            
+            legend_layout.addWidget(color_label)
+            legend_layout.addWidget(type_label)
+            legend_layout.addSpacing(15)
+        
+        legend_layout.addStretch()
+        traffic_layout.addLayout(legend_layout)
+        
         layout.addWidget(traffic_group)
         
         # Set layout stretch

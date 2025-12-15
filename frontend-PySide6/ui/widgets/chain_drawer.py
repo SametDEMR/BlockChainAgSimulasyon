@@ -8,11 +8,11 @@ class ChainDrawer:
     """Handles blockchain chain drawing and layout."""
     
     # Layout constants
-    BLOCK_WIDTH = 100
-    BLOCK_HEIGHT = 80
-    HORIZONTAL_SPACING = 20
-    VERTICAL_SPACING = 120  # Increased for fork clarity
-    BASE_Y = 200  # Center position
+    BLOCK_WIDTH = 140  # Updated from 100 to 140
+    BLOCK_HEIGHT = 120  # Updated from 80 to 120
+    HORIZONTAL_SPACING = 30  # Increased spacing for bigger blocks
+    VERTICAL_SPACING = 130  # Increased for fork clarity
+    BASE_Y = 0  # Center position (scene is -300 to 300)
     
     # Line colors
     MAIN_CHAIN_COLOR = QColor('#4CAF50')      # Green

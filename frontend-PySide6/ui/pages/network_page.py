@@ -53,9 +53,9 @@ class NetworkMapPage(QWidget):
         self.graph_widget.setMinimumHeight(400)
         layout.addWidget(self.graph_widget)
         
-        # Legend section
+        # Legend section - Horizontal layout
         legend_group = QGroupBox("Legend")
-        legend_layout = QVBoxLayout(legend_group)
+        legend_layout = QHBoxLayout(legend_group)  # Changed to horizontal
         
         # Create legend items
         legends = [
@@ -67,15 +67,14 @@ class NetworkMapPage(QWidget):
         ]
         
         for icon, text, color in legends:
-            item_layout = QHBoxLayout()
             icon_label = QLabel(icon)
             text_label = QLabel(text)
             text_label.setStyleSheet(f"color: {color};")
-            item_layout.addWidget(icon_label)
-            item_layout.addWidget(text_label)
-            item_layout.addStretch()
-            legend_layout.addLayout(item_layout)
+            legend_layout.addWidget(icon_label)
+            legend_layout.addWidget(text_label)
+            legend_layout.addSpacing(10)  # Space between items
         
+        legend_layout.addStretch()
         layout.addWidget(legend_group)
         
     def _connect_signals(self):

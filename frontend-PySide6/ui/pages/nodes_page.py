@@ -1,7 +1,7 @@
 """Nodes Page - Node list and details."""
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, 
-    QTreeWidgetItem, QPushButton, QLabel
+    QTreeWidgetItem, QPushButton, QLabel, QTextEdit, QSplitter
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QColor
@@ -28,6 +28,9 @@ class NodesPage(QWidget):
         header.setStyleSheet("font-size: 16px; font-weight: bold;")
         layout.addWidget(header)
         
+        # Create splitter for tree and activity log
+        splitter = QSplitter(Qt.Vertical)
+        
         # Tree widget
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels(["Node ID", "Status", "Role", "Trust/Balance", "Response Time"])
@@ -36,8 +39,39 @@ class NodesPage(QWidget):
         self.tree.setColumnWidth(2, 100)
         self.tree.setColumnWidth(3, 120)
         self.tree.setAlternatingRowColors(True)
+        self.tree.setMinimumHeight(400)  # Reduced to make room for activity log
+        splitter.addWidget(self.tree)
         
-        layout.addWidget(self.tree)
+        # Recent Activity Log
+        activity_group = QWidget()
+        activity_layout = QVBoxLayout(activity_group)
+        activity_layout.setContentsMargins(0, 0, 0, 0)
+        
+        activity_header = QLabel("Recent Activity Log")
+        activity_header.setStyleSheet("font-size: 14px; font-weight: bold;")
+        activity_layout.addWidget(activity_header)
+        
+        self.activity_log = QTextEdit()
+        self.activity_log.setReadOnly(True)
+        self.activity_log.setMaximumHeight(200)
+        self.activity_log.setStyleSheet("""
+            QTextEdit {
+                background-color: #2D2D2D;
+                color: #E0E0E0;
+                font-family: 'Courier New', monospace;
+                font-size: 11px;
+                border: 1px solid #3D3D3D;
+                border-radius: 4px;
+            }
+        """)
+        activity_layout.addWidget(self.activity_log)
+        
+        splitter.addWidget(activity_group)
+        
+        # Set splitter sizes (70% tree, 30% log)
+        splitter.setSizes([700, 300])
+        
+        layout.addWidget(splitter)
     
     def _setup_connections(self):
         """Setup signal connections."""
@@ -46,6 +80,31 @@ class NodesPage(QWidget):
     def _on_nodes_updated(self, nodes):
         """Handle nodes update."""
         self.tree.clear()
+        
+        # Track status changes for activity log
+        current_nodes = {n.get('id'): n for n in nodes}
+        
+        # Check for new nodes or status changes
+        if hasattr(self, '_previous_nodes'):
+            for node_id, node in current_nodes.items():
+                if node_id not in self._previous_nodes:
+                    # New node
+                    self.add_activity(f"[NEW] Node {node_id} joined network", "#4CAF50")
+                else:
+                    prev_node = self._previous_nodes[node_id]
+                    current_status = node.get('status')
+                    prev_status = prev_node.get('status')
+                    
+                    if current_status != prev_status:
+                        if current_status == 'under_attack':
+                            self.add_activity(f"[ALERT] Node {node_id} is under attack!", "#F44336")
+                        elif current_status == 'recovering':
+                            self.add_activity(f"[INFO] Node {node_id} is recovering", "#FF9800")
+                        elif current_status == 'healthy' and prev_status in ['under_attack', 'recovering']:
+                            self.add_activity(f"[OK] Node {node_id} recovered to healthy", "#4CAF50")
+        
+        # Store current state
+        self._previous_nodes = current_nodes
         
         # Group by role
         validators = [n for n in nodes if n.get('role') == 'validator']
@@ -115,5 +174,20 @@ class NodesPage(QWidget):
         return icons.get(status, '⚪')
     
     def clear_display(self):
-        """Clear tree."""
+        """Clear tree and activity log."""
         self.tree.clear()
+        self.activity_log.clear()
+    
+    def add_activity(self, message, color="#E0E0E0"):
+        """Add activity message to log.
+        
+        Args:
+            message: Activity message text
+            color: HTML color code for message
+        """
+        # Add colored message
+        self.activity_log.append(f"<span style='color:{color}'>{message}</span>")
+        
+        # Auto-scroll to bottom
+        scrollbar = self.activity_log.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())

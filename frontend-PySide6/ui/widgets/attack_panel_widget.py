@@ -35,16 +35,19 @@ class AttackPanelWidget(QWidget):
         # QToolBox - Her attack tipi ayrı bir "sayfa"
         self.toolbox = QToolBox()
         
-        # Attack sections
+        # Attack sections (ACTIVE ATTACKS hariç)
         self._create_ddos_section()
         self._create_byzantine_section()
         self._create_sybil_section()
         self._create_majority_section()
         self._create_partition_section()
         self._create_selfish_section()
-        self._create_active_attacks_section()
         
         layout.addWidget(self.toolbox)
+        
+        # ACTIVE ATTACKS - Ayrı grup, dashboard tarafından kullanılacak
+        self._create_active_attacks_section()
+        # Not added to layout - dashboard will handle it
         
     def _create_ddos_section(self):
         """DDoS Attack section"""
@@ -211,21 +214,31 @@ class AttackPanelWidget(QWidget):
         self.toolbox.addItem(widget, "💎 Selfish Mining")
         
     def _create_active_attacks_section(self):
-        """Active Attacks section - Son item"""
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        
-        # Info label
-        info = QLabel("Active attacks will appear here")
-        info.setStyleSheet("color: #9E9E9E; font-style: italic;")
-        layout.addWidget(info)
+        """Active Attacks section - Ayrı grup olarak en altta"""
+        self.active_attacks_group = QGroupBox("⚠️ Active Attacks (0)")
+        layout = QVBoxLayout(self.active_attacks_group)
         
         # List widget
         self.active_attacks_list = QListWidget()
         self.active_attacks_list.setSpacing(5)
+        self.active_attacks_list.setMaximumHeight(200)
         layout.addWidget(self.active_attacks_list)
         
-        self.toolbox.addItem(widget, "⚠️ Active Attacks (0)")
+        # Initially collapsed look
+        self.active_attacks_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                border: 2px solid #FF9800;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }
+        """)
         
     def _trigger_ddos(self):
         """DDoS attack trigger"""
@@ -409,8 +422,8 @@ class AttackPanelWidget(QWidget):
     def _update_active_attacks_title(self):
         """Active Attacks section title güncelle"""
         count = len(self.active_attacks)
-        # Son item (index 6)
-        self.toolbox.setItemText(6, f"⚠️ Active Attacks ({count})")
+        # QGroupBox title güncelle
+        self.active_attacks_group.setTitle(f"⚠️ Active Attacks ({count})")
         
     def _on_attack_stop_requested(self, attack_id: str):
         """Stop butonu handler"""

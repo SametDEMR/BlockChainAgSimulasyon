@@ -25,8 +25,10 @@ class NodeStatusCard(QFrame):
         
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
         self.setLineWidth(2)
-        self.setMinimumWidth(150)
-        self.setMaximumWidth(200)
+        self.setMinimumWidth(160)  # Reduced from 220
+        self.setMaximumWidth(200)  # Reduced from 300
+        self.setMinimumHeight(110)  # Add height limit
+        self.setMaximumHeight(130)
         
         self._setup_ui()
         self._apply_style()
@@ -34,17 +36,17 @@ class NodeStatusCard(QFrame):
     def _setup_ui(self):
         """Setup UI components."""
         layout = QVBoxLayout(self)
-        layout.setSpacing(5)
-        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(3)  # Reduced from 5
+        layout.setContentsMargins(8, 8, 8, 8)  # Reduced from 10
         
         # Header: Status icon + Node ID
         header_layout = QHBoxLayout()
         
         self.status_icon = QLabel("🟢")
-        self.status_icon.setStyleSheet("font-size: 16px;")
+        self.status_icon.setStyleSheet("font-size: 14px;")  # Reduced from 16
         
         self.node_label = QLabel(self.node_id)
-        self.node_label.setStyleSheet("font-weight: bold; font-size: 13px;")
+        self.node_label.setStyleSheet("font-weight: bold; font-size: 11px;")  # Reduced from 13
         
         header_layout.addWidget(self.status_icon)
         header_layout.addWidget(self.node_label)
@@ -54,12 +56,12 @@ class NodeStatusCard(QFrame):
         
         # Response time
         self.response_time = QLabel("RT: 0ms")
-        self.response_time.setStyleSheet("font-size: 11px; color: #B0B0B0;")
+        self.response_time.setStyleSheet("font-size: 9px; color: #B0B0B0;")  # Reduced from 11
         layout.addWidget(self.response_time)
         
         # Trust/Balance label
         self.metric_label = QLabel("Trust:")
-        self.metric_label.setStyleSheet("font-size: 11px; color: #B0B0B0;")
+        self.metric_label.setStyleSheet("font-size: 9px; color: #B0B0B0;")  # Reduced from 11
         layout.addWidget(self.metric_label)
         
         # Progress bar
@@ -67,13 +69,13 @@ class NodeStatusCard(QFrame):
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(False)
-        self.progress_bar.setMaximumHeight(8)
+        self.progress_bar.setMaximumHeight(6)  # Reduced from 8
         layout.addWidget(self.progress_bar)
         
         # Numeric value
         self.metric_value = QLabel("0")
         self.metric_value.setAlignment(Qt.AlignCenter)
-        self.metric_value.setStyleSheet("font-weight: bold; font-size: 12px;")
+        self.metric_value.setStyleSheet("font-weight: bold; font-size: 10px;")  # Reduced from 12
         layout.addWidget(self.metric_value)
     
     def _apply_style(self):

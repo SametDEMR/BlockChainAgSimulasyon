@@ -1,26 +1,3 @@
-📋 SORUN KATEGORİLERİ
-🎨 UI / FRONTEND GÖRSELLEŞTİRME SORUNLARI
-1. Layout ve Boyutlandırma
-
-✏️ Network nodes tablosunu büyütmek
-✏️ LEGEND kısmındaki öğeleri yan yana yazdırmak
-✏️ OVERVIEW ve NETWORK HEALTH kısmını dikeyde küçültmek
-✏️ Node Status Card kısmını yatayda genişletmek
-✏️ Blockchain görselleştirmede büyültme/küçültme kaldırmak, sadece yatay kaydırma
-✏️ Blockchain görselleştirmede içerik her zaman ortada olmalı
-✏️ Message Traffic Table'a renk açıklamalarını sayfanın altına eklemek
-
-2. Dashboard Düzenlemesi
-
-✏️ Attack Panel'deki ACTIVE ATTACKS kısmını çıkarıp en alta eklemek
-✏️ SYSTEM METRICS kısmını kaldırmak (önemsiz ise)
-
-3. Görselleştirme ve Veri Gösterimi
-
-✏️ Blockchain görselleştirmede blokların tüm verilerini ekranda göstermek (hover'da değil)
-✏️ RECENT ACTIVITY LOG'u Node'lar tabında alta eklemek
-
-
 🐛 BACKEND ENTEGRASYON VE LOGIC SORUNLARI
 4. Fork Detection
 

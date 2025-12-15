@@ -89,29 +89,8 @@ class BlockchainExplorerPage(QWidget):
         return group
     
     def _create_control_bar(self):
-        """Create control bar with zoom and filter controls."""
+        """Create control bar with filter controls (zoom removed)."""
         layout = QHBoxLayout()
-        
-        # Zoom controls
-        zoom_label = QLabel("Zoom:")
-        layout.addWidget(zoom_label)
-        
-        self.btn_zoom_in = QPushButton("➕ Zoom In")
-        self.btn_zoom_in.setMaximumWidth(100)
-        self.btn_zoom_in.clicked.connect(self._on_zoom_in)
-        layout.addWidget(self.btn_zoom_in)
-        
-        self.btn_zoom_out = QPushButton("➖ Zoom Out")
-        self.btn_zoom_out.setMaximumWidth(100)
-        self.btn_zoom_out.clicked.connect(self._on_zoom_out)
-        layout.addWidget(self.btn_zoom_out)
-        
-        self.btn_fit_view = QPushButton("🔲 Fit View")
-        self.btn_fit_view.setMaximumWidth(100)
-        self.btn_fit_view.clicked.connect(self._on_fit_view)
-        layout.addWidget(self.btn_fit_view)
-        
-        layout.addSpacing(20)
         
         # Filter controls
         filter_label = QLabel("Show:")
