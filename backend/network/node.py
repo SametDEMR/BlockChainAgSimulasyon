@@ -75,6 +75,9 @@ class Node:
         self.transactions_created = 0
         self.total_earned = 0.0
         
+        # Peer connections
+        self.peers: List[str] = []  # Connected peer node IDs
+        
     def create_transaction(self, receiver_address, amount):
         """
         Yeni transaction oluştur
@@ -354,6 +357,16 @@ class Node:
         if len(other_chain.chain) > len(self.blockchain.chain) and other_chain.is_valid():
             self.blockchain.chain = other_chain.chain.copy()
     
+    def add_peer(self, peer_id: str):
+        """Add peer connection"""
+        if peer_id not in self.peers and peer_id != self.id:
+            self.peers.append(peer_id)
+    
+    def remove_peer(self, peer_id: str):
+        """Remove peer connection"""
+        if peer_id in self.peers:
+            self.peers.remove(peer_id)
+    
     def get_metrics(self):
         """
         Node metriklerini döndür
@@ -396,7 +409,8 @@ class Node:
             'blocks_mined': self.blocks_mined,
             'transactions_created': self.transactions_created,
             'total_earned': self.total_earned,
-            'metrics': self.get_metrics()
+            'metrics': self.get_metrics(),
+            'peers': self.peers
         }
         
         # PBFT bilgileri ekle (validator ise)

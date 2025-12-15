@@ -355,7 +355,7 @@ class NetworkGraphWidget(QGraphicsView):
 
 
     def _create_edges(self, nodes: List[Dict]):
-        """Create edge items between connected nodes"""
+        """Create edge items based on peer connections"""
         # Partition bilgisi
         partition_groups = {}
         group_a_nodes = []
@@ -400,35 +400,36 @@ class NetworkGraphWidget(QGraphicsView):
                         self.edge_items.append(line)
                         self.edge_connections[line] = (n1, n2)
         else:
-            # Normal durum - eski kod
-            validators = [n['id'] for n in nodes if 'id' in n and n.get('role') == 'validator']
-            regulars = [n['id'] for n in nodes if 'id' in n and n.get('role') != 'validator']
-
+            # Normal durum - PEER BASED
             pen = QPen(QColor("#3D3D3D"), 1)
-
-            # Connect validators
-            for i, v1 in enumerate(validators):
-                for v2 in validators[i + 1:]:
-                    if v1 in self.node_positions and v2 in self.node_positions:
-                        x1, y1 = self.node_positions[v1]
-                        x2, y2 = self.node_positions[v2]
-                        line = QGraphicsLineItem(x1, y1, x2, y2)
-                        line.setPen(pen)
-                        line.setZValue(-1)
-                        self.scene.addItem(line)
-                        self.edge_items.append(line)
-                        self.edge_connections[line] = (v1, v2)
-
-            # Connect regulars to first validator
-            if validators:
-                v = validators[0]
-                for regular in regulars:
-                    if v in self.node_positions and regular in self.node_positions:
-                        x1, y1 = self.node_positions[v]
-                        x2, y2 = self.node_positions[regular]
-                        line = QGraphicsLineItem(x1, y1, x2, y2)
-                        line.setPen(pen)
-                        line.setZValue(-1)
-                        self.scene.addItem(line)
-                        self.edge_items.append(line)
-                        self.edge_connections[line] = (v, regular)
+            created_edges = set()  # Duplicate önlemek için
+            
+            for node in nodes:
+                if 'id' not in node:
+                    continue
+                
+                node_id = node['id']
+                peers = node.get('peers', [])
+                
+                for peer_id in peers:
+                    # Edge pair - alfabetik sıralama ile duplicate önle
+                    edge_key = tuple(sorted([node_id, peer_id]))
+                    
+                    if edge_key in created_edges:
+                        continue
+                    
+                    # Pozisyon kontrolü
+                    if node_id not in self.node_positions or peer_id not in self.node_positions:
+                        continue
+                    
+                    x1, y1 = self.node_positions[node_id]
+                    x2, y2 = self.node_positions[peer_id]
+                    
+                    line = QGraphicsLineItem(x1, y1, x2, y2)
+                    line.setPen(pen)
+                    line.setZValue(-1)
+                    self.scene.addItem(line)
+                    self.edge_items.append(line)
+                    self.edge_connections[line] = (node_id, peer_id)
+                    
+                    created_edges.add(edge_key)

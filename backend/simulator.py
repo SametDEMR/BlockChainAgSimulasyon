@@ -87,6 +87,34 @@ class Simulator:
         print(f"✅ Initialized {total_nodes} nodes ({validator_count} validators, {regular_count} regular)")
         print(f"✅ MessageBroker configured with {len(self.message_broker.message_queues)} nodes")
         print(f"✅ All nodes share genesis block: {genesis_chain[0].hash[:16]}...")
+        
+        # Setup peer connections
+        self._setup_peer_connections()
+    
+    def _setup_peer_connections(self):
+        """Setup realistic mesh topology peer connections"""
+        
+        # 1. Validators birbirine mesh (full connected)
+        for i, v1 in enumerate(self.validator_nodes):
+            for v2 in self.validator_nodes[i+1:]:
+                v1.add_peer(v2.id)
+                v2.add_peer(v1.id)
+        
+        # 2. Regular nodes -> Multiple validators (2-3 random)
+        for regular in self.regular_nodes:
+            if len(self.validator_nodes) == 0:
+                continue
+            
+            num_connections = random.randint(2, min(3, len(self.validator_nodes)))
+            connected_validators = random.sample(self.validator_nodes, num_connections)
+            
+            for validator in connected_validators:
+                regular.add_peer(validator.id)
+                validator.add_peer(regular.id)
+        
+        # Log peer connections
+        total_connections = sum(len(n.peers) for n in self.nodes) // 2  # Divide by 2 (bidirectional)
+        print(f"✅ Peer connections established: {total_connections} connections")
     
     async def auto_block_production(self):
         """
