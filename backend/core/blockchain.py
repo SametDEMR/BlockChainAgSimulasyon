@@ -134,6 +134,7 @@ class Blockchain:
     def add_block(self, block):
         """
         Hazır bir bloğu zincire ekle (konsensüs için)
+        Gereksiz fork kontrollerini önle
         
         Args:
             block (Block): Eklenecek blok
@@ -141,7 +142,7 @@ class Blockchain:
         Returns:
             bool: Ekleme başarılı mı?
         """
-        # Fork tespiti - aynı parent'a sahip farklı bloklar var mı?
+        # Fork tespiti - SADECE gerekli durumlarda kontrol et
         fork_detected = self._check_fork_on_add(block)
         
         if fork_detected:
@@ -152,7 +153,13 @@ class Blockchain:
         if not self._is_valid_new_block(block):
             return False
         
+        # Zincire ekle
         self.chain.append(block)
+        
+        # Fork status güncelle (eğer fork varsa)
+        if self.fork_detected:
+            self._update_fork_status()
+        
         return True
     
     def _is_valid_new_block(self, new_block):
@@ -272,31 +279,37 @@ class Blockchain:
         return False
 
     def resolve_fork(self, incoming_chain):
-        """Fork çözümle - en uzun zincir kuralı"""
+        """
+        Fork çözümle - en uzun zincir kuralı
+        Resolve sonrası temizlik yap
+        """
         # En uzun zincir kazanır
         if len(incoming_chain) > len(self.chain):
-            # Mevcut zinciri yedeğe al
+            # Mevcut zinciri orphan olarak işaretle
             orphaned = self.chain.copy()
             self.orphaned_blocks.extend(orphaned)
-
+            
             # Yeni zinciri kabul et
             self.chain = incoming_chain
-            self.fork_detected = False
-
-            # ✅ EKLE - Fork history'deki son event'i resolved yap
-            if self.fork_history:
-                self.fork_history[-1]['resolved'] = True
-
+            
             print(f"✅ Fork resolved: Longer chain accepted ({len(incoming_chain)} blocks)")
-            return True
-
-        print(f"⚠️  Fork resolved: Current chain kept ({len(self.chain)} blocks)")
-
-        # ✅ EKLE - Mevcut zincir kazandıysa da resolved işaretle
+            resolved = True
+        else:
+            print(f"⚠️  Fork resolved: Current chain kept ({len(self.chain)} blocks)")
+            resolved = False
+        
+        # Fork history'deki son event'i resolved yap
         if self.fork_history:
             self.fork_history[-1]['resolved'] = True
-
-        return False
+            self.fork_history[-1]['winner'] = 'incoming' if resolved else 'current'
+        
+        # Alternatif zincirleri temizle (artık resolved)
+        self._cleanup_alternative_chains()
+        
+        # Fork flag'ini güncelle
+        self._update_fork_status()
+        
+        return resolved
     
     def add_alternative_chain(self, chain):
         """
@@ -358,10 +371,46 @@ class Blockchain:
         self.fork_history.append(fork_event)
         print(f"⚠️  Fork detected at block #{fork_point}")
     
+    def _cleanup_alternative_chains(self):
+        """
+        Resolved olan alternatif zincirleri temizle
+        Orphaned olarak işaretlenmiş zincirleri tut (history için)
+        """
+        if not self.alternative_chains:
+            return
+        
+        # Tüm alternatif zincirleri orphaned'a taşı
+        for alt_chain_data in self.alternative_chains:
+            alt_chain = alt_chain_data['chain']
+            # Orphaned listesine ekle (duplicate kontrolü ile)
+            for block in alt_chain:
+                if block not in self.orphaned_blocks:
+                    self.orphaned_blocks.append(block)
+        
+        # Alternatif zincirleri temizle
+        chains_count = len(self.alternative_chains)
+        self.alternative_chains.clear()
+        print(f"🧹 Cleaned up {chains_count} alternative chains")
+    
+    def _update_fork_status(self):
+        """
+        Fork status'ınu güncelle
+        Sadece aktif fork varsa True yap
+        """
+        # Aktif fork kontrolü
+        active_forks = [event for event in self.fork_history if not event.get('resolved', False)]
+        has_alternative_chains = len(self.alternative_chains) > 0
+        
+        # Fork detected sadece aktif durum varsa True
+        self.fork_detected = has_alternative_chains and len(active_forks) > 0
+        
+        if not self.fork_detected:
+            print(f"✅ No active forks detected")
+    
     def _check_fork_on_add(self, new_block):
         """
         Yeni blok eklenirken fork kontrolü yap
-        Aynı parent'a sahip farklı bir blok zaten var mı?
+        SADECE gerçek fork durumlarında True döner
         
         Args:
             new_block (Block): Kontrol edilecek blok
@@ -369,20 +418,33 @@ class Blockchain:
         Returns:
             bool: Fork tespit edildi mi?
         """
-        # Eğer zincirin son bloğu ile aynı parent'a sahipse ve hash farklıysa -> FORK!
         latest_block = self.get_latest_block()
         
-        # Yeni blok bir sonraki index'te değilse
-        if new_block.index != len(self.chain):
-            # Önceki bir noktadan fork olmuş olabilir
-            return True
+        # DURUM 1: Normal sıralı blok (fork DEĞİL)
+        # Yeni blok index'i = son blok index'i + 1 ve previous_hash doğru
+        if (new_block.index == len(self.chain) and 
+            new_block.previous_hash == latest_block.hash):
+            return False  # Normal ekleme, fork yok
         
-        # Aynı index'te başka blok var mı kontrol et
+        # DURUM 2: Aynı index'te farklı hash (FORK!)
         if new_block.index == latest_block.index and new_block.hash != latest_block.hash:
-            # Aynı parent'tan iki farklı blok -> FORK!
             print(f"🔴 FORK DETECTED: Two blocks at index {new_block.index}")
             print(f"   Current: {latest_block.hash[:16]}...")
             print(f"   Incoming: {new_block.hash[:16]}...")
+            return True
+        
+        # DURUM 3: Önceki bir noktadan gelen blok (potansiyel fork)
+        # Ancak zincirde o index'te zaten blok varsa
+        if new_block.index < len(self.chain):
+            existing_block = self.chain[new_block.index]
+            if existing_block.hash != new_block.hash:
+                print(f"🔴 FORK DETECTED: Alternative block for index {new_block.index}")
+                return True
+        
+        # DURUM 4: Gelecekten gelen blok (muhtemelen ağ gecikmesi)
+        if new_block.index > len(self.chain):
+            # Bu durumda senkronizasyon sorunu var, fork olarak işaretle
+            print(f"⚠️  SYNC ISSUE: Block index {new_block.index} > chain length {len(self.chain)}")
             return True
         
         return False
@@ -465,13 +527,19 @@ class Blockchain:
     
     def get_fork_status(self):
         """
-        Fork durumunu döndür
+        Fork durumunu döndür - SADECE aktif fork'lar için True döner
         
         Returns:
             dict: Fork bilgileri
         """
+        # Aktif fork kontrolü - resolved olmamış fork event var mı?
+        active_forks = [event for event in self.fork_history if not event.get('resolved', False)]
+        
+        # Gerçek fork durumu: Aktif alternatif zincir VAR ve henüz resolve edilmemiş
+        real_fork_detected = len(self.alternative_chains) > 0 and len(active_forks) > 0
+        
         return {
-            'fork_detected': self.fork_detected,
+            'fork_detected': real_fork_detected,  # DÜZELTME: Sadece aktif fork varsa True
             'alternative_chains_count': len(self.alternative_chains),
             'fork_events_count': len(self.fork_history),
             'orphaned_blocks_count': len(self.orphaned_blocks),

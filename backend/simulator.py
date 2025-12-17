@@ -133,6 +133,7 @@ class Simulator:
             await self._generate_random_transactions()
             
             # Validator'lar için PBFT blok önerisi
+            validator_proposed_block = False
             if self.validator_nodes:
                 # Primary validator blok önerir
                 primary = None
@@ -145,14 +146,18 @@ class Simulator:
                     # Primary blok önerir
                     try:
                         block = await primary.propose_block()
+                        if block:
+                            validator_proposed_block = True
                     except Exception as e:
                         print(f"⚠️  Error in block proposal: {e}")
             
             # Regular node'lar için klasik mining
+            # ÖNEMLİ: Sadece validator blok üretmediyse regular node mine eder
             active_regular = [n for n in self.regular_nodes if n.is_active]
             
             # ✅ PARTITION KONTROLÜ - Her iki grupta ayrı mining (FORK oluşturur)
-            if self.message_broker.partition_active:
+            # NOT: Partition durumunda da validator varsa regular mine etmez
+            if self.message_broker.partition_active and not validator_proposed_block:
                 # Group A'dan miner seç
                 group_a_miners = [n for n in active_regular if n.id in self.message_broker.group_a_ids]
                 block_a = None
@@ -191,7 +196,8 @@ class Simulator:
                             node.receive_block(block_a)
             else:
                 # Normal durum: Partition yoksa tek miner
-                if active_regular:
+                # ÖNEMLİ: Sadece validator blok üretmediyse regular node mine eder
+                if active_regular and not validator_proposed_block:
                     miner = random.choice(active_regular)
                     block = miner.mine_block()
                     
