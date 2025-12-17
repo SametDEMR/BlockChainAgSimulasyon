@@ -130,36 +130,32 @@ class Blockchain:
         self.pending_transactions = self.pending_transactions[self.max_transactions_per_block:]
         
         return new_block
-    
+
     def add_block(self, block):
         """
         Hazır bir bloğu zincire ekle (konsensüs için)
-        Gereksiz fork kontrollerini önle
-        
+        Partition durumunda alternatif zincire ekler
+
         Args:
             block (Block): Eklenecek blok
-            
+
         Returns:
             bool: Ekleme başarılı mı?
         """
         # Fork tespiti - SADECE gerekli durumlarda kontrol et
         fork_detected = self._check_fork_on_add(block)
-        
+
         if fork_detected:
             # Fork durumunda alternatif zincir oluştur
             return self._handle_fork_block(block)
-        
+
         # Normal durum - blok doğrulama
         if not self._is_valid_new_block(block):
             return False
-        
+
         # Zincire ekle
         self.chain.append(block)
-        
-        # Fork status güncelle (eğer fork varsa)
-        if self.fork_detected:
-            self._update_fork_status()
-        
+
         return True
     
     def _is_valid_new_block(self, new_block):
@@ -302,13 +298,13 @@ class Blockchain:
         if self.fork_history:
             self.fork_history[-1]['resolved'] = True
             self.fork_history[-1]['winner'] = 'incoming' if resolved else 'current'
-        
+
         # Alternatif zincirleri temizle (artık resolved)
         self._cleanup_alternative_chains()
-        
+
         # Fork flag'ini güncelle
         self._update_fork_status()
-        
+
         return resolved
     
     def add_alternative_chain(self, chain):
@@ -448,32 +444,50 @@ class Blockchain:
             return True
         
         return False
-    
+
     def _handle_fork_block(self, fork_block):
         """
         Fork durumunda gelen bloğu alternatif zincir olarak ekle
-        
+
         Args:
             fork_block (Block): Fork oluşturan blok
-            
+
         Returns:
             bool: İşlem başarılı mı?
         """
         # Fork point'i bul (ortak parent)
         fork_point = fork_block.index - 1
-        
-        # Alternatif zincir oluştur (fork_point'e kadar ana zincir + yeni blok)
-        alternative_chain = self.chain[:fork_point + 1].copy()
-        alternative_chain.append(fork_block)
-        
-        # Alternatif zinciri kaydet
-        self.add_alternative_chain(alternative_chain)
+
+        # Mevcut alternatif zincir var mı kontrol et
+        alternative_chain_exists = False
+        for alt_chain_data in self.alternative_chains:
+            alt_chain = alt_chain_data['chain']
+            # Bu blok mevcut alternatif zincire ait mi?
+            if alt_chain and len(alt_chain) > fork_point:
+                if alt_chain[fork_point].hash == fork_block.previous_hash:
+                    # Bu alternatif zincire ekle
+                    alt_chain.append(fork_block)
+                    alt_chain_data['length'] = len(alt_chain)
+                    alternative_chain_exists = True
+                    print(f"✅ Fork block added to existing alternative chain at index {fork_block.index}")
+                    break
+
+        if not alternative_chain_exists:
+            # Yeni alternatif zincir oluştur
+            alternative_chain = self.chain[:fork_point + 1].copy()
+            alternative_chain.append(fork_block)
+
+            # Alternatif zinciri kaydet
+            self.add_alternative_chain(alternative_chain)
+            print(f"✅ New alternative chain created starting at fork_point: #{fork_point}")
+
         self.fork_detected = True
-        
-        # Fork event kaydet
-        self._record_fork_event(fork_point, alternative_chain)
-        
-        print(f"✅ Fork block added to alternative chain (fork_point: #{fork_point})")
+
+        # Fork event kaydet (ilk fork ise)
+        if not any(event['fork_point'] == fork_point and not event.get('resolved', False)
+                   for event in self.fork_history):
+            self._record_fork_event(fork_point, alternative_chain)
+
         return True
     
     def _get_fork_branches_for_ui(self):
@@ -545,6 +559,42 @@ class Blockchain:
             'orphaned_blocks_count': len(self.orphaned_blocks),
             'fork_history': self.fork_history[-5:] if self.fork_history else [],  # Son 5 olay
             'fork_branches': self._get_fork_branches_for_ui()  # UI için fork branch'leri
+        }
+
+    def get_real_time_fork_data(self):
+        """
+        Real-time fork verisi döndür - UI için optimize edilmiş
+        Partition sırasında sürekli güncellenir
+
+        Returns:
+            dict: Fork visualizasyon verisi
+        """
+        # Fork branch'lerini hazırla
+        branches = self._get_fork_branches_for_ui()
+
+        # Her branch için detaylı bilgi
+        branch_details = []
+        for branch in branches:
+            chain = branch['chain']
+
+            # Son 5 bloğu al (performans için)
+            recent_blocks = chain[-5:] if len(chain) > 5 else chain
+
+            branch_detail = {
+                'is_main': branch['is_main'],
+                'status': branch['status'],
+                'length': branch['length'],
+                'fork_point': branch['fork_point'],
+                'recent_blocks': recent_blocks,
+                'tip_hash': chain[-1]['hash'][:16] if chain else None,  # Son blok hash'i
+            }
+            branch_details.append(branch_detail)
+
+        return {
+            'fork_active': self.fork_detected,
+            'branch_count': len(branches),
+            'branches': branch_details,
+            'timestamp': time.time()
         }
     
     def to_dict(self):

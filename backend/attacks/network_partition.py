@@ -196,6 +196,26 @@ class NetworkPartition:
             self.attack_id,
             "Merge process started - comparing chain lengths"
         )
+
+        print("\n" + "=" * 60)
+        print("🔍 PRE-MERGE FORK STATUS")
+        print("=" * 60)
+        for node in self.group_a[:1]:  # Sadece ilk node'u göster (örnek)
+            fork_status = node.blockchain.get_fork_status()
+            print(f"📊 Group A Sample ({node.id}):")
+            print(f"   Main chain: {len(node.blockchain.chain)} blocks")
+            print(f"   Alternative chains: {fork_status['alternative_chains_count']}")
+            print(f"   Fork detected: {fork_status['fork_detected']}")
+            break
+
+        for node in self.group_b[:1]:  # Sadece ilk node'u göster (örnek)
+            fork_status = node.blockchain.get_fork_status()
+            print(f"📊 Group B Sample ({node.id}):")
+            print(f"   Main chain: {len(node.blockchain.chain)} blocks")
+            print(f"   Alternative chains: {fork_status['alternative_chains_count']}")
+            print(f"   Fork detected: {fork_status['fork_detected']}")
+            break
+        print("=" * 60 + "\n")
         
         # Her grubun en uzun zincirini bul
         group_a_chains = [(n, len(n.blockchain.chain)) for n in self.group_a]
@@ -232,19 +252,40 @@ class NetworkPartition:
                 break
         
         # ✅ TÜM NODE'LARI KAZANAN ZİNCİRLE SENKRONİZE ET
+        # ✅ TÜM NODE'LARI KAZANAN ZİNCİRLE SENKRONİZE ET
         orphaned_blocks = 0
         if winner_chain_node:
             winner_chain = winner_chain_node.blockchain.chain
-            
+
             # Kaybeden grubu güncelle
             for loser_node in loser_nodes:
                 loser_chain_length = len(loser_node.blockchain.chain)
-                if loser_chain_length > 0 and loser_chain_length < winner_length:
+
+                # Kaybeden zincir orphaned olarak işaretle
+                if loser_chain_length > 0:
                     # Fork tespit et ve kaydet
                     loser_node.blockchain.detect_fork(winner_chain)
-                    # Kazanan zinciri kabul et
+                    # Kazanan zinciri kabul et (resolve_fork zaten orphan'ları işaretler)
                     loser_node.blockchain.resolve_fork(winner_chain)
-                    orphaned_blocks += loser_chain_length
+
+                    # Orphaned block sayısını hesapla
+                    fork_point = 0
+                    for i in range(min(len(loser_node.blockchain.chain), len(winner_chain))):
+                        if loser_node.blockchain.chain[i].hash != winner_chain[i].hash:
+                            fork_point = i
+                            break
+                    orphaned_blocks += (loser_chain_length - fork_point)
+
+            # ✅ KAZANAN GRUBU DA GÜNCELLEMELİYİZ
+            for winner_node in winner_nodes:
+                # Kendi gruptaki alternatif zincirleri de temizle
+                if winner_node.blockchain.alternative_chains:
+                    winner_node.blockchain.resolve_fork(winner_chain)
+
+                # En uzun zinciri al
+                if len(winner_node.blockchain.chain) < winner_length:
+                    winner_node.blockchain.chain = [b for b in winner_chain]
+                    print(f"✅ Synced {winner_node.id} to winning chain ({winner_length} blocks)")
             
             # ✅ KAZANAN GRUBU DA GÜNCELLEMELİYİZ (kısa olanlar varsa)
             for winner_node in winner_nodes:

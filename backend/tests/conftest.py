@@ -6,8 +6,9 @@ import sys
 import os
 import asyncio
 
-# Proje root'unu path'e ekle
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Proje root'unu path'e ekle (iki seviye yukarı - BlockChainAgSimulasyon klasörü)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.insert(0, project_root)
 
 from backend.simulator import Simulator
 from backend.network.message_broker import MessageBroker

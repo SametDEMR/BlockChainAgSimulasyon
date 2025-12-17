@@ -319,32 +319,43 @@ class Node:
             self.total_earned += self.blockchain.mining_reward
         
         return block
-    
+
     def receive_block(self, block):
         """
         Başka bir node'dan blok al ve zincire ekle
         Fork durumunu tespit eder ve alternatif zincirleri yönetir
-        
+        Partition kontrolü ekler
+
         Args:
             block: Alınan blok
-            
+
         Returns:
             bool: Blok kabul edildi mi?
         """
         if not self.is_active:
             return False
-        
+
+        # Partition kontrolü - bu blok hangi gruptan geldi?
+        block_from_my_partition = True
+        if hasattr(self, 'partition_group') and self.partition_group:
+            # Blok kendi partition grubumdan mı?
+            block_miner = getattr(block, 'miner', None)
+            if block_miner:
+                # Miner'ın partition grubunu kontrol et (bu bilgi blockchain'den geliyor)
+                # Şimdilik basit kontrol: blok hash'i farklıysa diğer partition'dan
+                my_latest = self.blockchain.get_latest_block()
+                if block.index == my_latest.index and block.hash != my_latest.hash:
+                    block_from_my_partition = False
+
         # Blok ekle (fork tespiti add_block içinde yapılıyor)
         success = self.blockchain.add_block(block)
-        
-        # Eğer fork durumundaysa ve alternatif zincir varsa
-        # gelen bloğun alternatif zincire ait olup olmadığını kontrol et
-        if not success and self.blockchain.alternative_chains:
-            # Alternatif zincire eklemeyi dene
-            for idx in range(len(self.blockchain.alternative_chains)):
-                if self.blockchain.add_block_to_alternative_chain(block, idx):
-                    return True
-        
+
+        # Partition sırasında diğer gruptaki blokları fork olarak işaretle
+        if not success and not block_from_my_partition:
+            # Bu blok alternatif partition'dan - fork olarak ekle
+            fork_handled = self.blockchain._handle_fork_block(block)
+            return fork_handled
+
         return success
     
     def sync_blockchain(self, other_chain):

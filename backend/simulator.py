@@ -134,22 +134,23 @@ class Simulator:
             
             # Validator'lar için PBFT blok önerisi
             validator_proposed_block = False
-            if self.validator_nodes:
-                # Primary validator blok önerir
-                primary = None
-                for validator in self.validator_nodes:
-                    if validator.pbft and validator.pbft.is_primary() and validator.is_active:
-                        primary = validator
-                        break
-                
-                if primary:
-                    # Primary blok önerir
-                    try:
-                        block = await primary.propose_block()
-                        if block:
-                            validator_proposed_block = True
-                    except Exception as e:
-                        print(f"⚠️  Error in block proposal: {e}")
+            if not self.message_broker.partition_active:
+                if self.validator_nodes:
+                    # Primary validator blok önerir
+                    primary = None
+                    for validator in self.validator_nodes:
+                        if validator.pbft and validator.pbft.is_primary() and validator.is_active:
+                            primary = validator
+                            break
+
+                    if primary:
+                        # Primary blok önerir
+                        try:
+                            block = await primary.propose_block()
+                            if block:
+                                validator_proposed_block = True
+                        except Exception as e:
+                            print(f"⚠️  Error in block proposal: {e}")
             
             # Regular node'lar için klasik mining
             # ÖNEMLİ: Sadece validator blok üretmediyse regular node mine eder
@@ -157,43 +158,53 @@ class Simulator:
             
             # ✅ PARTITION KONTROLÜ - Her iki grupta ayrı mining (FORK oluşturur)
             # NOT: Partition durumunda da validator varsa regular mine etmez
+            # ✅ PARTITION KONTROLÜ - Her iki grupta ayrı mining (FORK oluşturur)
             if self.message_broker.partition_active and not validator_proposed_block:
-                # Group A'dan miner seç
+                # Group A mining
                 group_a_miners = [n for n in active_regular if n.id in self.message_broker.group_a_ids]
                 block_a = None
                 if group_a_miners:
                     miner_a = random.choice(group_a_miners)
                     block_a = miner_a.mine_block()
                     if block_a:
+                        print(f"⛏️  [PARTITION] Group A mined block #{block_a.index} by {miner_a.id}")
                         # Bloğu sadece Group A node'larına yay
                         for node in self.nodes:
-                            if node.id in self.message_broker.group_a_ids and node != miner_a:
+                            if node.id in self.message_broker.group_a_ids and node.id != miner_a.id:
                                 node.receive_block(block_a)
-                
-                # Group B'den miner seç (AYNI ANDA - fork oluşturur)
+
+                # Group B mining (PARALEL - fork oluşturur)
                 group_b_miners = [n for n in active_regular if n.id in self.message_broker.group_b_ids]
                 block_b = None
                 if group_b_miners:
                     miner_b = random.choice(group_b_miners)
                     block_b = miner_b.mine_block()
                     if block_b:
+                        print(f"⛏️  [PARTITION] Group B mined block #{block_b.index} by {miner_b.id}")
                         # Bloğu sadece Group B node'larına yay
                         for node in self.nodes:
-                            if node.id in self.message_broker.group_b_ids and node != miner_b:
+                            if node.id in self.message_broker.group_b_ids and node.id != miner_b.id:
                                 node.receive_block(block_b)
-                
-                # ✅ ÖNEMLİ - Her iki grubu birbirine "göster" (fork tespiti için)
-                # Bu bloklar birbirine ulaşmaz ama fork tespit edilir
+
+                # ✅ KRİTİK: Fork branch'lerini çapraz bilgilendirme
+                # Her grup diğer grubun blok hash'ini duyar (fork detection için)
                 if block_a and block_b:
-                    # Her grup diğer grubun blokunu "duyar" ama kullanamaz
-                    # Bu sayede fork branch'leri oluşur
+                    # Fork artık kesin - her iki grupta da farklı bloklar var
+                    print(
+                        f"🔴 FORK CONFIRMED: Block #{block_a.index} | A: {block_a.hash[:16]}... | B: {block_b.hash[:16]}...")
+
+                    # Group A node'larına Group B'nin bloğunu göster (fork olarak)
                     for node in self.nodes:
                         if node.id in self.message_broker.group_a_ids:
-                            # Group A node'ları Group B'nin blokunu fork olarak görür
-                            node.receive_block(block_b)
-                        elif node.id in self.message_broker.group_b_ids:
-                            # Group B node'ları Group A'nın blokunu fork olarak görür
-                            node.receive_block(block_a)
+                            # Alternative chain'e ekle (main chain'e değil)
+                            node.blockchain._handle_fork_block(block_b)
+
+                    # Group B node'larına Group A'nın bloğunu göster (fork olarak)
+                    for node in self.nodes:
+                        if node.id in self.message_broker.group_b_ids:
+                            # Alternative chain'e ekle (main chain'e değil)
+                            node.blockchain._handle_fork_block(block_a)
+
             else:
                 # Normal durum: Partition yoksa tek miner
                 # ÖNEMLİ: Sadece validator blok üretmediyse regular node mine eder
