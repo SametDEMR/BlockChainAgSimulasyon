@@ -100,6 +100,18 @@ class APIClient:
         """Get fork status."""
         return self._request("GET", "/blockchain/fork-status")
     
+    def get_fork_branches(self) -> Dict:
+        """Get fork branches for visualization.
+        
+        Returns:
+            Fork branch data with:
+            - fork_active: bool
+            - branch_count: int
+            - branches: list of branch details
+            - timestamp: float
+        """
+        return self._request("GET", "/blockchain/fork-branches")
+    
     def get_pbft_status(self) -> Dict:
         """Get PBFT consensus status."""
         return self._request("GET", "/pbft/status")

@@ -106,6 +106,33 @@ async def get_fork_status():
     }
 
 
+@app.get("/blockchain/fork-branches")
+async def get_fork_branches():
+    """
+    Fork branch'lerini görselleştirme için döndür
+    Ana zincir + alternatif zincirler (fork dalları)
+    
+    Returns:
+        - fork_active: Fork aktif mi? (bool)
+        - branch_count: Toplam branch sayısı
+        - branches: Her branch için detaylı bilgi
+            - is_main: Ana dal mı?
+            - status: winner/active/orphaned
+            - length: Branch uzunluğu
+            - fork_point: Dal ayrılma noktası (index)
+            - recent_blocks: Son 5 blok (performans için)
+            - tip_hash: Son blok hash'i (ilk 16 karakter)
+    """
+    if not simulator.nodes:
+        raise HTTPException(status_code=404, detail="No nodes available")
+    
+    # İlk node'un fork data'sını kullan (tüm node'lar sync olmalı)
+    node = simulator.nodes[0]
+    fork_data = node.blockchain.get_real_time_fork_data()
+    
+    return fork_data
+
+
 @app.get("/nodes")
 async def get_nodes():
     return {"total_nodes": len(simulator.nodes), "nodes": simulator.get_all_nodes_status()}

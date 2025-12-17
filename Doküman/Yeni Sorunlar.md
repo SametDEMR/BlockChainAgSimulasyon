@@ -9,3 +9,6 @@
 
 ✏️ Aynı anda sadece 1 atağa izin verilmeli
 ✏️ Şu anda birden fazla atak tetiklenebiliyor
+
+
+ACTİVE ATTACKS KISMI KALKACAK TÜM KODLARDA SİLİNECEK. GEREK YOK.

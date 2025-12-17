@@ -42,18 +42,19 @@ class DataManager(QObject):
             'fork_status': None
         }
     
-    def _parse_blockchain(self, raw_data: dict) -> dict:
+    def _parse_blockchain(self, raw_data: dict, fork_branches_data: dict = None) -> dict:
         """Parse backend blockchain data to expected format.
         
         Args:
             raw_data: Raw blockchain data from API
+            fork_branches_data: Fork branches data from /blockchain/fork-branches endpoint
             
         Returns:
             Parsed blockchain data
         """
         # Get nested chain data
         chain_data = raw_data.get('chain', {})
-        blocks_raw = chain_data.get('chain', [])
+        blocks_raw = chain_data.get('blocks', [])  # Use 'blocks' not 'chain'
         
         # Parse blocks
         blocks = []
@@ -72,8 +73,13 @@ class DataManager(QObject):
             }
             blocks.append(parsed_block)
         
-        # Get fork status
+        # Get fork status from chain_data
         fork_status = chain_data.get('fork_status', {})
+        
+        # Merge fork branches data if available
+        if fork_branches_data:
+            fork_status['fork_branches'] = fork_branches_data.get('branches', [])
+            fork_status['fork_detected'] = fork_branches_data.get('fork_active', False)
         
         return {
             'chain_length': chain_data.get('chain_length', 0),
@@ -103,8 +109,11 @@ class DataManager(QObject):
 
             blockchain = self.api_client.get_blockchain()
             if blockchain and 'error' not in blockchain:
-                # Parse blockchain data
-                parsed = self._parse_blockchain(blockchain)
+                # Fetch fork branches
+                fork_branches = self.api_client.get_fork_branches()
+                
+                # Parse blockchain data with fork branches
+                parsed = self._parse_blockchain(blockchain, fork_branches)
                 self._cache['blockchain'] = parsed
                 self.blockchain_updated.emit(parsed)
 

@@ -93,7 +93,8 @@ class ChainDrawer:
         print(f"[_process_fork_branches] Processing {len(fork_branches)} branches")
 
         for branch_idx, branch in enumerate(fork_branches):
-            branch_chain = branch.get('chain', [])
+            # Support both 'chain' and 'recent_blocks' from backend
+            branch_chain = branch.get('chain', branch.get('recent_blocks', []))
             # Use branch-level status (not individual block status)
             branch_status = branch.get('status', 'active')  # 'active', 'orphaned', 'winner'
             is_main = branch.get('is_main', False)
