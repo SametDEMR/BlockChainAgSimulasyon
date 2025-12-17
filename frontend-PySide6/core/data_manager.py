@@ -159,6 +159,7 @@ class DataManager(QObject):
 
             fork_status = self.api_client.get_fork_status()
             if fork_status and 'error' not in fork_status:
+                print("🔍 DEBUG - Fork Status Alındı:", fork_status)  # EKLE
                 self._cache['fork_status'] = fork_status
                 self.fork_status_updated.emit(fork_status)
 

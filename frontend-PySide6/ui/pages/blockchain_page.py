@@ -143,8 +143,19 @@ class BlockchainExplorerPage(QWidget):
         """Handle fork status update."""
         # Fork status is a dict with 'fork_statuses' key containing list of node fork statuses
         fork_statuses = fork_status.get('fork_statuses', [])
-        
-        # Update fork status widget
+        print(f"🔍 DEBUG - Fork Status Updated: {len(fork_statuses)} nodes")
+
+        # İlk node'un detaylı bilgisini yazdır
+        if fork_statuses:
+            first_node = fork_statuses[0]
+            print(f"🔍 DEBUG - First Node ID: {first_node.get('node_id')}")
+            fork_info = first_node.get('fork_status', {})
+            print(f"🔍 DEBUG - Fork Detected: {fork_info.get('fork_detected')}")
+            fork_branches = fork_info.get('fork_branches', [])
+            print(f"🔍 DEBUG - Fork Branches Count: {len(fork_branches)}")
+            if fork_branches:
+                print(f"🔍 DEBUG - First Branch Keys: {list(fork_branches[0].keys())}")
+
         self.fork_status_widget.update_fork_status(fork_statuses)
         
         # Count total forks and orphaned blocks

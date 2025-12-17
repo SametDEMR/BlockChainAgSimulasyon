@@ -8,12 +8,12 @@ CONFIG = {
     'network': {
         'total_nodes': 10,           # Toplam node sayısı
         'validator_nodes': 4,         # Validator node sayısı (PBFT için)
-        'network_delay_ms': 100,      # Node'lar arası iletişim gecikmesi (ms)
+        'network_delay_ms': 10,      # Node'lar arası iletişim gecikmesi (ms)
     },
     
     # Blockchain Configuration
     'blockchain': {
-        'block_time': 3,              # Blok üretim aralığı (saniye) - DÜZELTME: 5'ten 3'e düşürüldü
+        'block_time': 1,              # Blok üretim aralığı (saniye)
         'initial_difficulty': 4,      # Mining zorluğu (hash başındaki 0 sayısı)
         'max_transactions_per_block': 10,  # Bir blokta maksimum transaction sayısı
         'mining_reward': 50,          # Madencilik ödülü
@@ -28,7 +28,7 @@ CONFIG = {
     
     # UI Configuration
     'ui': {
-        'refresh_interval': 2,        # Arayüz yenileme aralığı (saniye)
+        'refresh_interval': 1000,        # Arayüz yenileme aralığı (saniye)
         'page_title': 'Blockchain Attack Simulator',
         'page_icon': '🔐',
         'layout': 'wide',

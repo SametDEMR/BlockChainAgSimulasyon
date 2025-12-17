@@ -15,7 +15,7 @@ class APIClient:
         """
         self.base_url = base_url.rstrip('/')
         self.session = requests.Session()
-        self.timeout = 5
+        self.timeout = 1000
         self._max_retries = 3
     
     def _request(self, method: str, endpoint: str, **kwargs) -> Optional[Dict]:
@@ -59,7 +59,7 @@ class APIClient:
         try:
             response = self.session.get(
                 f"{self.base_url}/", 
-                timeout=2
+                timeout=1000
             )
             return response.status_code == 200
         except:
