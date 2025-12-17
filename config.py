@@ -13,7 +13,7 @@ CONFIG = {
     
     # Blockchain Configuration
     'blockchain': {
-        'block_time': 5,              # Blok üretim aralığı (saniye)
+        'block_time': 3,              # Blok üretim aralığı (saniye) - DÜZELTME: 5'ten 3'e düşürüldü
         'initial_difficulty': 4,      # Mining zorluğu (hash başındaki 0 sayısı)
         'max_transactions_per_block': 10,  # Bir blokta maksimum transaction sayısı
         'mining_reward': 50,          # Madencilik ödülü

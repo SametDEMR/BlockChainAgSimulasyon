@@ -15,7 +15,9 @@ def main():
     # Create core components
     api_client = APIClient("http://localhost:8000")
     data_manager = DataManager(api_client)
-    updater = DataUpdater(api_client, data_manager, interval_ms=2000)
+    # DÜZELTME: Refresh interval'ı 1 saniyeye düşür (blok üretiminden hızlı olmalı)
+    # Bu sayede her blok üretildiğinde hemen görüntülenir
+    updater = DataUpdater(api_client, data_manager, interval_ms=1000)
     
     # Create and show main window
     window = MainWindow(api_client, data_manager, updater)
