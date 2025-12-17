@@ -90,12 +90,10 @@ class MainWindow(QMainWindow):
     def _setup_connections(self):
         """Setup signal connections."""
         self.data_manager.connection_error.connect(self._on_connection_error)
-        self.data_manager.attacks_updated.connect(self._on_attacks_updated)
         self.updater.update_completed.connect(self._on_update_completed)
         
         # Attack panel connections
         self.attack_panel_widget.attack_triggered.connect(self._on_attack_triggered)
-        self.attack_panel_widget.attack_stop_requested.connect(self._on_attack_stop_requested)
         
         # Node list updates
         self.data_manager.nodes_updated.connect(self.attack_panel_widget.update_node_list)
@@ -151,7 +149,6 @@ class MainWindow(QMainWindow):
             self.blockchain_page.clear_display()
             self.metrics_widget.clear_display()
             self.pbft_page.clear_display()
-            self.attack_panel_widget.clear_active_attacks()
         else:
             self.status_bar.showMessage("Failed to reset simulator", 3000)
     
@@ -160,22 +157,6 @@ class MainWindow(QMainWindow):
         self.connection_label.setText("🔴 Connection Error")
         self.connection_label.setStyleSheet("color: red;")
         self.status_bar.showMessage(f"Error: {error}", 5000)
-
-    def _on_attacks_updated(self, attacks_data: dict):
-        """Attack status güncellendi"""
-        active_attacks = attacks_data.get('active_attacks', [])
-
-        for attack in active_attacks:
-            attack_id = attack.get('attack_id')
-            progress = attack.get('progress', 0) / 100.0  # 0-1 arası
-            remaining = attack.get('remaining', 0)
-
-            if attack_id:
-                self.attack_panel_widget.update_active_attack(
-                    attack_id,
-                    progress,
-                    remaining
-                )
     
     def _on_update_completed(self):
         """Handle update completion."""
@@ -185,40 +166,14 @@ class MainWindow(QMainWindow):
     
     def _on_attack_triggered(self, attack_type: str, params: dict):
         """Handle attack trigger request."""
-        # Extract target if it exists
         target = params.get('target')
-        # Pass parameters properly
         result = self.api_client.trigger_attack(attack_type, target, params)
         
         if result and 'error' not in result:
-            # Attack successfully triggered
-            attack_id = result.get('attack_id', '')
-            if attack_id:
-                # Add to active attacks display
-                attack_data = {
-                    'id': attack_id,
-                    'type': attack_type,
-                    'target': params.get('target', 'N/A'),
-                    'progress': 0.0,
-                    'remaining_time': result.get('duration', 30)
-                }
-                self.attack_panel_widget.add_active_attack(attack_data)
-                self.status_bar.showMessage(f"{attack_type.upper()} attack started", 3000)
+            self.status_bar.showMessage(f"{attack_type.upper()} attack started", 3000)
         else:
             error_msg = result.get('error', 'Unknown error') if result else 'Connection error'
             self.status_bar.showMessage(f"Failed to trigger attack: {error_msg}", 5000)
-    
-    def _on_attack_stop_requested(self, attack_id: str):
-        """Handle attack stop request."""
-        result = self.api_client.stop_attack(attack_id)
-        
-        if result and 'error' not in result:
-            # Attack stopped successfully
-            self.attack_panel_widget.remove_active_attack(attack_id)
-            self.status_bar.showMessage(f"Attack stopped", 3000)
-        else:
-            error_msg = result.get('error', 'Unknown error') if result else 'Connection error'
-            self.status_bar.showMessage(f"Failed to stop attack: {error_msg}", 5000)
     
     def closeEvent(self, event):
         """Handle window close."""

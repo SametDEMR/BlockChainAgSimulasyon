@@ -52,14 +52,9 @@ class DashboardPage(QWidget):
         right_panel = self._create_right_panel()
         main_layout.addWidget(right_panel, 0, 2)
 
-        # ROW 2: Active Attacks | Node Status Cards (wide)
-        # Column 0: Active Attacks from attack panel
-        if hasattr(self.attack_panel_widget, 'active_attacks_group'):
-            main_layout.addWidget(self.attack_panel_widget.active_attacks_group, 1, 0)
-
-        # Column 1-2: Node Status Cards (spanning 2 columns)
+        # ROW 2: Node Status Cards (full width)
         cards_panel = self._create_cards_panel()
-        main_layout.addWidget(cards_panel, 1, 1, 1, 2)  # row, col, rowspan, colspan
+        main_layout.addWidget(cards_panel, 1, 0, 1, 3)  # row, col, rowspan, colspan (spanning all 3 columns)
 
         # Column stretches
         main_layout.setColumnStretch(0, 0)  # Fixed width

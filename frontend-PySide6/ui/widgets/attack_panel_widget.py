@@ -5,11 +5,9 @@ Attack Control Panel Widget - QToolBox ile attack yönetimi
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QToolBox, QGroupBox, 
     QLabel, QComboBox, QSlider, QPushButton,
-    QHBoxLayout, QFormLayout, QListWidget, QListWidgetItem
+    QHBoxLayout, QFormLayout
 )
 from PySide6.QtCore import Qt, Signal
-
-from .active_attack_item import ActiveAttackItem
 
 
 class AttackPanelWidget(QWidget):
@@ -20,11 +18,9 @@ class AttackPanelWidget(QWidget):
     
     # Signals
     attack_triggered = Signal(str, dict)  # (attack_type, params)
-    attack_stop_requested = Signal(str)  # attack_id
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.active_attacks = {}  # {attack_id: QListWidgetItem}
         self.init_ui()
         
     def init_ui(self):
@@ -44,10 +40,6 @@ class AttackPanelWidget(QWidget):
         self._create_selfish_section()
         
         layout.addWidget(self.toolbox)
-        
-        # ACTIVE ATTACKS - Ayrı grup, dashboard tarafından kullanılacak
-        self._create_active_attacks_section()
-        # Not added to layout - dashboard will handle it
         
     def _create_ddos_section(self):
         """DDoS Attack section"""
@@ -213,33 +205,6 @@ class AttackPanelWidget(QWidget):
         
         self.toolbox.addItem(widget, "💎 Selfish Mining")
         
-    def _create_active_attacks_section(self):
-        """Active Attacks section - Ayrı grup olarak en altta"""
-        self.active_attacks_group = QGroupBox("⚠️ Active Attacks (0)")
-        layout = QVBoxLayout(self.active_attacks_group)
-        
-        # List widget
-        self.active_attacks_list = QListWidget()
-        self.active_attacks_list.setSpacing(5)
-        self.active_attacks_list.setMaximumHeight(200)
-        layout.addWidget(self.active_attacks_list)
-        
-        # Initially collapsed look
-        self.active_attacks_group.setStyleSheet("""
-            QGroupBox {
-                font-weight: bold;
-                border: 2px solid #FF9800;
-                border-radius: 5px;
-                margin-top: 10px;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
-            }
-        """)
-        
     def _trigger_ddos(self):
         """DDoS attack trigger"""
         target = self.ddos_target.currentText()
@@ -336,95 +301,3 @@ class AttackPanelWidget(QWidget):
             idx = self.selfish_attacker.findText(current_selfish)
             if idx >= 0:
                 self.selfish_attacker.setCurrentIndex(idx)
-                
-    def add_active_attack(self, attack_data: dict):
-        """
-        Active attack ekle
-        
-        Args:
-            attack_data: {
-                "id": "attack_123",
-                "type": "ddos",
-                "target": "node_5",
-                "progress": 0.0,
-                "remaining_time": 30
-            }
-        """
-        attack_id = attack_data.get("id", "")
-        if not attack_id or attack_id in self.active_attacks:
-            return
-            
-        # Custom widget oluştur
-        attack_widget = ActiveAttackItem(attack_data)
-        attack_widget.stop_requested.connect(self._on_attack_stop_requested)
-        
-        # List item
-        item = QListWidgetItem(self.active_attacks_list)
-        item.setSizeHint(attack_widget.sizeHint())
-        self.active_attacks_list.addItem(item)
-        self.active_attacks_list.setItemWidget(item, attack_widget)
-        
-        # Tracking
-        self.active_attacks[attack_id] = item
-        
-        # Update section title
-        self._update_active_attacks_title()
-        
-    def remove_active_attack(self, attack_id: str):
-        """
-        Active attack kaldır
-        
-        Args:
-            attack_id: Attack ID
-        """
-        if attack_id not in self.active_attacks:
-            return
-            
-        item = self.active_attacks[attack_id]
-        row = self.active_attacks_list.row(item)
-        self.active_attacks_list.takeItem(row)
-        
-        del self.active_attacks[attack_id]
-        
-        # Update section title
-        self._update_active_attacks_title()
-        
-    def update_active_attack(self, attack_id: str, progress: float, remaining_time: int):
-        """
-        Active attack progress güncelle
-        
-        Args:
-            attack_id: Attack ID
-            progress: 0.0 - 1.0
-            remaining_time: Kalan saniye
-        """
-        if attack_id not in self.active_attacks:
-            return
-            
-        item = self.active_attacks[attack_id]
-        widget = self.active_attacks_list.itemWidget(item)
-        if isinstance(widget, ActiveAttackItem):
-            widget.update_progress(progress, remaining_time)
-
-            if progress >= 1.0 or remaining_time <= 0:
-                self.clear_active_attacks()
-            
-    def get_active_attacks_count(self) -> int:
-        """Active attack sayısı"""
-        return len(self.active_attacks)
-        
-    def clear_active_attacks(self):
-        """Tüm active attack'leri temizle"""
-        self.active_attacks_list.clear()
-        self.active_attacks.clear()
-        self._update_active_attacks_title()
-        
-    def _update_active_attacks_title(self):
-        """Active Attacks section title güncelle"""
-        count = len(self.active_attacks)
-        # QGroupBox title güncelle
-        self.active_attacks_group.setTitle(f"⚠️ Active Attacks ({count})")
-        
-    def _on_attack_stop_requested(self, attack_id: str):
-        """Stop butonu handler"""
-        self.attack_stop_requested.emit(attack_id)

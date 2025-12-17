@@ -313,15 +313,6 @@ async def trigger_attack(request: TriggerAttackRequest):
     }
 
 
-@app.get("/attack/status")
-async def get_attack_status():
-    return {
-        "active_attacks": attack_engine.get_active_attacks(),
-        "recent_history": attack_engine.get_attack_history(limit=10),
-        "statistics": attack_engine.get_statistics()
-    }
-
-
 @app.get("/attack/status/{attack_id}")
 async def get_specific_attack_status(attack_id: str):
     attack = attack_engine.get_attack_status(attack_id)
