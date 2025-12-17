@@ -1,9 +1,3 @@
-8. Fork Görselleştirme
-
-🔴 Fork görselleştirme düzgün çalışmıyor
-🔴 Kontrol edilmesi gerekiyor
-
-
 🔒 GÜVENLIK VE KISITLAMALAR
 10. Eşzamanlı Atak Limiti
 
@@ -12,3 +6,5 @@
 
 
 ACTİVE ATTACKS KISMI KALKACAK TÜM KODLARDA SİLİNECEK. GEREK YOK.
+
+Dashboard ekranındaki active attacks kısmınıda kaldıralım. o kısmın tamamını Node Status card olarak yapalım. Active Attacks ile ilgiil olan backend kodlarınıda silelim
