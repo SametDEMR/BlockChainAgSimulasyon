@@ -149,8 +149,8 @@ class Simulator:
                             block = await primary.propose_block()
                             if block:
                                 validator_proposed_block = True
-                        except Exception as e:
-                            print(f"⚠️  Error in block proposal: {e}")
+                        except Exception:
+                            pass  # Hata durumunda sessizce devam et
             
             # Regular node'lar için klasik mining
             # ÖNEMLİ: Sadece validator blok üretmediyse regular node mine eder
@@ -167,7 +167,6 @@ class Simulator:
                     miner_a = random.choice(group_a_miners)
                     block_a = miner_a.mine_block()
                     if block_a:
-                        print(f"⛏️  [PARTITION] Group A mined block #{block_a.index} by {miner_a.id}")
                         # Bloğu sadece Group A node'larına yay
                         for node in self.nodes:
                             if node.id in self.message_broker.group_a_ids and node.id != miner_a.id:
@@ -180,7 +179,6 @@ class Simulator:
                     miner_b = random.choice(group_b_miners)
                     block_b = miner_b.mine_block()
                     if block_b:
-                        print(f"⛏️  [PARTITION] Group B mined block #{block_b.index} by {miner_b.id}")
                         # Bloğu sadece Group B node'larına yay
                         for node in self.nodes:
                             if node.id in self.message_broker.group_b_ids and node.id != miner_b.id:
@@ -190,8 +188,6 @@ class Simulator:
                 # Her grup diğer grubun blok hash'ini duyar (fork detection için)
                 if block_a and block_b:
                     # Fork artık kesin - her iki grupta da farklı bloklar var
-                    print(
-                        f"🔴 FORK CONFIRMED: Block #{block_a.index} | A: {block_a.hash[:16]}... | B: {block_b.hash[:16]}...")
 
                     # Group A node'larına Group B'nin bloğunu göster (fork olarak)
                     for node in self.nodes:
@@ -232,8 +228,8 @@ class Simulator:
                 if validator.is_active:
                     try:
                         await validator.process_pbft_messages()
-                    except Exception as e:
-                        print(f"⚠️  Error processing PBFT messages for {validator.id}: {e}")
+                    except Exception:
+                        pass
     
     async def _generate_random_transactions(self):
         """
@@ -405,7 +401,6 @@ class Simulator:
         # MessageBroker'a kaydet
         self.message_broker.register_node(node.id)
         
-        print(f"🔴 Sybil node created: {node_id}")
         return node
     
     def _remove_sybil_node(self, node_id: str):
@@ -433,8 +428,6 @@ class Simulator:
         
         # MessageBroker'dan kaldır
         self.message_broker.unregister_node(node_id)
-        
-        print(f"✓ Sybil node removed: {node_id}")
     
     def reset(self):
         """Simülasyonu sıfırla"""

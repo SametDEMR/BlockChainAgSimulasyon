@@ -43,16 +43,6 @@ class ChainDrawer:
         fork_status = blockchain_data.get('fork_status', {})
         fork_branches = fork_status.get('fork_branches', [])
 
-        # DEBUG: Detailed fork branch info
-        print(f"[ChainDrawer] blockchain_data keys: {list(blockchain_data.keys())}")
-        print(f"[ChainDrawer] fork_status keys: {list(fork_status.keys())}")
-        
-        # DEBUG
-        print(f"[ChainDrawer] Blocks count: {len(blocks)}")
-        print(f"[ChainDrawer] Fork branches count: {len(fork_branches)}")
-        for i, branch in enumerate(fork_branches):
-            print(f"  Branch {i}: status={branch.get('status')}, is_main={branch.get('is_main')}, blocks={len(branch.get('chain', []))}")
-
         # Build block index map
         block_map = {block['hash']: block for block in blocks}
 
@@ -90,8 +80,6 @@ class ChainDrawer:
         """
         branch_info = {}
 
-        print(f"[_process_fork_branches] Processing {len(fork_branches)} branches")
-
         for branch_idx, branch in enumerate(fork_branches):
             # Support both 'chain' and 'recent_blocks' from backend
             branch_chain = branch.get('chain', branch.get('recent_blocks', []))
@@ -111,8 +99,6 @@ class ChainDrawer:
             # Assign Y-level based on branch index
             y_offset = branch_idx - (len(fork_branches) - 1) / 2
 
-            print(f"  Branch {branch_idx}: branch_status={branch_status}, is_main={is_main}, final_status={status}, fork_point={fork_point}, y_offset={y_offset}, blocks={len(branch_chain)}")
-
             for block in branch_chain:
                 block_hash = block.get('hash')
                 if block_hash:
@@ -123,11 +109,6 @@ class ChainDrawer:
                         'branch_idx': branch_idx,
                         'is_main': is_main
                     }
-
-        print(f"[_process_fork_branches] Total blocks assigned: {len(branch_info)}")
-        # DEBUG: Print first few block assignments
-        for i, (hash_key, info) in enumerate(list(branch_info.items())[:5]):
-            print(f"    Block {hash_key[:8]}: status={info['status']}, is_main={info['is_main']}")
 
         return branch_info
 
@@ -155,7 +136,6 @@ class ChainDrawer:
                 info = branch_info[block_hash]
                 y_offset = info['y_offset']
                 y = self.BASE_Y + (y_offset * self.VERTICAL_SPACING)
-                print(f"  Block #{index}: y_offset={y_offset}, y={y}, status={info['status']}")
             else:
                 # Main chain (no fork data)
                 y = self.BASE_Y

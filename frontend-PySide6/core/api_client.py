@@ -194,10 +194,6 @@ class APIClient:
         """Stop an active attack."""
         return self._request("POST", f"/attack/stop/{attack_id}")
     
-    def get_attack_status(self) -> Dict:
-        """Get attack status."""
-        return self._request("GET", "/attack/status")
-    
     def get_specific_attack_status(self, attack_id: str) -> Dict:
         """Get specific attack status."""
         return self._request("GET", f"/attack/status/{attack_id}")

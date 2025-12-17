@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+from contextlib import asynccontextmanager
 import uvicorn
 import sys
 import os
@@ -22,10 +23,31 @@ from backend.attacks.network_partition import NetworkPartition
 from backend.attacks.selfish_mining import SelfishMining
 from config import get_api_config
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for startup and shutdown."""
+    # Startup
+    print("="*60)
+    print("🚀 Blockchain Attack Simulator API")
+    print(f"Nodes: {len(simulator.nodes)} | Validators: {len(simulator.validator_nodes)}")
+    print("Attack Engine: Ready")
+    print("="*60)
+    
+    yield
+    
+    # Shutdown
+    global background_tasks_list
+    simulator.stop()
+    for task in background_tasks_list:
+        if task and not task.done():
+            task.cancel()
+    print("Shutdown complete")
+
 app = FastAPI(
     title="Blockchain Attack Simulator API",
     description="Interactive Blockchain Network Simulator with Attack Scenarios",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 app.add_middleware(
@@ -528,25 +550,6 @@ async def get_node_metrics(node_id: str):
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
     return {"node_id": node.id, "role": node.role, "status": node.status, "metrics": node.get_metrics()}
-
-
-@app.on_event("startup")
-async def startup_event():
-    print("=" * 60)
-    print("🚀 Blockchain Attack Simulator API")
-    print(f"Nodes: {len(simulator.nodes)} | Validators: {len(simulator.validator_nodes)}")
-    print("Attack Engine: Ready")
-    print("=" * 60)
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    global background_tasks_list
-    simulator.stop()
-    for task in background_tasks_list:
-        if task and not task.done():
-            task.cancel()
-    print("Shutdown complete")
 
 
 if __name__ == "__main__":

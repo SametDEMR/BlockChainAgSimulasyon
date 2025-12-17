@@ -83,7 +83,6 @@ class Blockchain:
         # Coinbase transaction değilse imza kontrolü
         if transaction.sender != "COINBASE":
             if not transaction.signature:
-                print(f"Transaction rejected: No signature")
                 return False
         
         self.pending_transactions.append(transaction)
@@ -172,22 +171,18 @@ class Blockchain:
         
         # Index kontrolü
         if new_block.index != latest_block.index + 1:
-            print(f"Invalid index: {new_block.index} != {latest_block.index + 1}")
             return False
         
         # Previous hash kontrolü
         if new_block.previous_hash != latest_block.hash:
-            print(f"Invalid previous_hash")
             return False
         
         # Hash kontrolü
         if new_block.hash != new_block.calculate_hash():
-            print(f"Invalid hash")
             return False
         
         # Difficulty kontrolü
         if not new_block.hash.startswith('0' * self.difficulty):
-            print(f"Invalid difficulty")
             return False
         
         return True
@@ -206,12 +201,10 @@ class Blockchain:
             
             # Hash kontrolü
             if current_block.hash != current_block.calculate_hash():
-                print(f"Block #{i} has invalid hash")
                 return False
             
             # Previous hash bağlantısı
             if current_block.previous_hash != previous_block.hash:
-                print(f"Block #{i} has invalid previous_hash")
                 return False
         
         return True
@@ -257,7 +250,6 @@ class Blockchain:
         
         # Genesis block aynı olmalı
         if incoming_chain[0].hash != self.chain[0].hash:
-            print("Fork rejected: Different genesis block")
             return False
         
         # Farklılaşma noktasını bul
@@ -287,11 +279,8 @@ class Blockchain:
             
             # Yeni zinciri kabul et
             self.chain = incoming_chain
-            
-            print(f"✅ Fork resolved: Longer chain accepted ({len(incoming_chain)} blocks)")
             resolved = True
         else:
-            print(f"⚠️  Fork resolved: Current chain kept ({len(self.chain)} blocks)")
             resolved = False
         
         # Fork history'deki son event'i resolved yap
@@ -365,7 +354,6 @@ class Blockchain:
             'resolved': False
         }
         self.fork_history.append(fork_event)
-        print(f"⚠️  Fork detected at block #{fork_point}")
     
     def _cleanup_alternative_chains(self):
         """
@@ -384,9 +372,7 @@ class Blockchain:
                     self.orphaned_blocks.append(block)
         
         # Alternatif zincirleri temizle
-        chains_count = len(self.alternative_chains)
         self.alternative_chains.clear()
-        print(f"🧹 Cleaned up {chains_count} alternative chains")
     
     def _update_fork_status(self):
         """
@@ -399,9 +385,6 @@ class Blockchain:
         
         # Fork detected sadece aktif durum varsa True
         self.fork_detected = has_alternative_chains and len(active_forks) > 0
-        
-        if not self.fork_detected:
-            print(f"✅ No active forks detected")
     
     def _check_fork_on_add(self, new_block):
         """
@@ -424,9 +407,6 @@ class Blockchain:
         
         # DURUM 2: Aynı index'te farklı hash (FORK!)
         if new_block.index == latest_block.index and new_block.hash != latest_block.hash:
-            print(f"🔴 FORK DETECTED: Two blocks at index {new_block.index}")
-            print(f"   Current: {latest_block.hash[:16]}...")
-            print(f"   Incoming: {new_block.hash[:16]}...")
             return True
         
         # DURUM 3: Önceki bir noktadan gelen blok (potansiyel fork)
@@ -434,13 +414,10 @@ class Blockchain:
         if new_block.index < len(self.chain):
             existing_block = self.chain[new_block.index]
             if existing_block.hash != new_block.hash:
-                print(f"🔴 FORK DETECTED: Alternative block for index {new_block.index}")
                 return True
         
         # DURUM 4: Gelecekten gelen blok (muhtemelen ağ gecikmesi)
         if new_block.index > len(self.chain):
-            # Bu durumda senkronizasyon sorunu var, fork olarak işaretle
-            print(f"⚠️  SYNC ISSUE: Block index {new_block.index} > chain length {len(self.chain)}")
             return True
         
         return False
@@ -469,7 +446,6 @@ class Blockchain:
                     alt_chain.append(fork_block)
                     alt_chain_data['length'] = len(alt_chain)
                     alternative_chain_exists = True
-                    print(f"✅ Fork block added to existing alternative chain at index {fork_block.index}")
                     break
 
         if not alternative_chain_exists:
@@ -479,7 +455,6 @@ class Blockchain:
 
             # Alternatif zinciri kaydet
             self.add_alternative_chain(alternative_chain)
-            print(f"✅ New alternative chain created starting at fork_point: #{fork_point}")
 
         self.fork_detected = True
 

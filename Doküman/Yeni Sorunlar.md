@@ -5,6 +5,4 @@
 ✏️ Şu anda birden fazla atak tetiklenebiliyor
 
 
-ACTİVE ATTACKS KISMI KALKACAK TÜM KODLARDA SİLİNECEK. GEREK YOK.
-
-Dashboard ekranındaki active attacks kısmınıda kaldıralım. o kısmın tamamını Node Status card olarak yapalım. Active Attacks ile ilgiil olan backend kodlarınıda silelim
+Bu uygulamamızı exe dosyasına dönüştürmem gerekiyor. BAckend ve Frontend tek bir exe üstünden çalışacak şekilde nasıl yaparız. Önmcelikle konuşalım.

@@ -147,7 +147,6 @@ class Node:
             exclude_sender=False  # Primary da almalı (kendi log'una eklemek için)
         )
         
-        print(f"Node {self.id} (PRIMARY) proposed block #{block.index}")
         return block
     
     async def process_pbft_messages(self):
@@ -191,18 +190,11 @@ class Node:
         # Block hash validasyonu - Byzantine detection
         block_data = message.content.get('block')
         if block_data and block_data.get('hash') != pbft_msg.block_hash:
-            # HATA: Pre-prepare'deki hash ile gerçek blok hash'i uyuşmuyor!
-            # Bu Byzantine davranış işaretidir
-            print(f"⚠️  Node {self.id} detected MISMATCH in pre-prepare from {pbft_msg.node_id}")
-            print(f"    Expected: {pbft_msg.block_hash[:16]}...")
-            print(f"    Actual: {block_data.get('hash', 'N/A')[:16]}...")
-            
-            # Mesajı reddet, prepare gönderme
+            # Byzantine davranış - mesajı reddet
             return
         
         # Fake hash detection (tamamı 0)
         if pbft_msg.block_hash == "0" * 64:
-            print(f"⚠️  Node {self.id} detected FAKE hash from {pbft_msg.node_id}")
             # Byzantine davranış - mesajı reddet
             return
         
@@ -301,7 +293,6 @@ class Node:
         
         if self.role == "validator":
             # Validator'lar PBFT kullanır, mine_block değil
-            print(f"Node {self.id} is validator, use propose_block() instead")
             return None
         
         if len(self.blockchain.pending_transactions) == 0:

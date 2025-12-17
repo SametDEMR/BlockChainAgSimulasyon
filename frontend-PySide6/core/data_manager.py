@@ -8,12 +8,10 @@ class DataManager(QObject):
     
     # Data update signals
     status_updated = Signal(dict)
-    attacks_updated = Signal(dict)
     nodes_updated = Signal(list)
     blockchain_updated = Signal(dict)
     pbft_updated = Signal(dict)
     metrics_updated = Signal(dict)
-    attacks_updated = Signal(dict)
     messages_updated = Signal(list)
     fork_status_updated = Signal(dict)
     
@@ -134,12 +132,6 @@ class DataManager(QObject):
             if metrics and 'error' not in metrics:
                 self._cache['metrics'] = metrics
                 self.metrics_updated.emit(metrics)
-
-            # Attack status güncelle - GÜNCELLENMİŞ BÖLÜM
-            attacks = self.api_client.get_attack_status()
-            if attacks:  # None kontrolü yeterli, 'error' kontrolüne gerek yok
-                self._cache['attacks'] = attacks
-                self.attacks_updated.emit(attacks)
 
             messages = self.api_client.get_network_messages()
             if messages and 'error' not in messages:
