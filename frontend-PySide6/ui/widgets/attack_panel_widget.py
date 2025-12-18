@@ -21,6 +21,7 @@ class AttackPanelWidget(QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.trigger_buttons = []  # Tüm trigger butonlarını sakla
         self.init_ui()
         
     def init_ui(self):
@@ -77,6 +78,7 @@ class AttackPanelWidget(QWidget):
         # Trigger button
         trigger_btn = QPushButton("▶️ Trigger DDoS Attack")
         trigger_btn.clicked.connect(self._trigger_ddos)
+        self.trigger_buttons.append(trigger_btn)  # Butonu sakla
         layout.addRow(trigger_btn)
         
         self.toolbox.addItem(widget, "🌊 DDoS Attack")
@@ -99,6 +101,7 @@ class AttackPanelWidget(QWidget):
         # Trigger button
         trigger_btn = QPushButton("▶️ Trigger Byzantine Attack")
         trigger_btn.clicked.connect(self._trigger_byzantine)
+        self.trigger_buttons.append(trigger_btn)  # Butonu sakla
         layout.addRow(trigger_btn)
         
         self.toolbox.addItem(widget, "⚔️ Byzantine Attack")
@@ -134,6 +137,7 @@ class AttackPanelWidget(QWidget):
         # Trigger button
         trigger_btn = QPushButton("▶️ Trigger Sybil Attack")
         trigger_btn.clicked.connect(self._trigger_sybil)
+        self.trigger_buttons.append(trigger_btn)  # Butonu sakla
         layout.addRow(trigger_btn)
         
         self.toolbox.addItem(widget, "👥 Sybil Attack")
@@ -157,6 +161,7 @@ class AttackPanelWidget(QWidget):
         trigger_btn = QPushButton("▶️ Trigger Majority Attack")
         trigger_btn.clicked.connect(self._trigger_majority)
         trigger_btn.setStyleSheet("background-color: #F44336;")
+        self.trigger_buttons.append(trigger_btn)  # Butonu sakla
         layout.addWidget(trigger_btn)
         
         layout.addStretch()
@@ -178,6 +183,7 @@ class AttackPanelWidget(QWidget):
         # Trigger button
         trigger_btn = QPushButton("▶️ Trigger Network Partition")
         trigger_btn.clicked.connect(self._trigger_partition)
+        self.trigger_buttons.append(trigger_btn)  # Butonu sakla
         layout.addWidget(trigger_btn)
         
         layout.addStretch()
@@ -201,6 +207,7 @@ class AttackPanelWidget(QWidget):
         # Trigger button
         trigger_btn = QPushButton("▶️ Trigger Selfish Mining")
         trigger_btn.clicked.connect(self._trigger_selfish)
+        self.trigger_buttons.append(trigger_btn)  # Butonu sakla
         layout.addRow(trigger_btn)
         
         self.toolbox.addItem(widget, "💎 Selfish Mining")
@@ -301,3 +308,23 @@ class AttackPanelWidget(QWidget):
             idx = self.selfish_attacker.findText(current_selfish)
             if idx >= 0:
                 self.selfish_attacker.setCurrentIndex(idx)
+    
+    def set_buttons_enabled(self, enabled: bool):
+        """
+        Tüm trigger butonlarını enable/disable et.
+        
+        Args:
+            enabled: True ise butonlar etkin, False ise devre dışı
+        """
+        for button in self.trigger_buttons:
+            button.setEnabled(enabled)
+    
+    def update_button_states(self, has_active_attack: bool):
+        """
+        Aktif attack durumuna göre butonları güncelle.
+        
+        Args:
+            has_active_attack: Aktif bir attack var mı?
+        """
+        # Aktif attack varsa butonları disable et
+        self.set_buttons_enabled(not has_active_attack)

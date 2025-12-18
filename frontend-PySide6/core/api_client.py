@@ -45,6 +45,9 @@ class APIClient:
                 if attempt == self._max_retries - 1:
                     return None
             except requests.exceptions.HTTPError as e:
+                # 409 Conflict - Aktif attack var
+                if response.status_code == 409:
+                    return {"error": "conflict", "message": response.json().get("detail", str(e))}
                 return {"error": str(e)}
             except Exception as e:
                 return {"error": str(e)}
@@ -193,6 +196,17 @@ class APIClient:
     def stop_attack(self, attack_id: str) -> Dict:
         """Stop an active attack."""
         return self._request("POST", f"/attack/stop/{attack_id}")
+    
+    def get_all_attacks_status(self) -> Dict:
+        """Get all active and historical attacks.
+        
+        Returns:
+            Dict with:
+            - active_attacks: List of active attacks
+            - attack_history: List of past attacks
+            - statistics: Attack engine statistics
+        """
+        return self._request("GET", "/attack/status")
     
     def get_specific_attack_status(self, attack_id: str) -> Dict:
         """Get specific attack status."""

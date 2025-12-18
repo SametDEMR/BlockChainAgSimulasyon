@@ -279,6 +279,11 @@ async def reset_simulator():
 
 @app.post("/attack/trigger")
 async def trigger_attack(request: TriggerAttackRequest):
+    # Eşzamanlı atak limiti kontrolü
+    can_trigger, reason = attack_engine.can_trigger_attack()
+    if not can_trigger:
+        raise HTTPException(status_code=409, detail=reason)
+    
     target_node = simulator.get_node_by_id(request.target_node_id)
     if not target_node:
         raise HTTPException(status_code=404, detail="Target node not found")
@@ -335,6 +340,16 @@ async def trigger_attack(request: TriggerAttackRequest):
     }
 
 
+@app.get("/attack/status")
+async def get_all_attacks_status():
+    """Tüm aktif ve geçmiş attack'leri döndür"""
+    return {
+        "active_attacks": attack_engine.get_active_attacks(),
+        "attack_history": attack_engine.get_attack_history(limit=10),
+        "statistics": attack_engine.get_statistics()
+    }
+
+
 @app.get("/attack/status/{attack_id}")
 async def get_specific_attack_status(attack_id: str):
     attack = attack_engine.get_attack_status(attack_id)
@@ -369,6 +384,11 @@ async def stop_byzantine_attack():
 @app.post("/attack/sybil/trigger")
 async def trigger_sybil_attack(num_nodes: int = 20):
     """Sybil saldırısını tetikle"""
+    # Eşzamanlı atak limiti kontrolü
+    can_trigger, reason = attack_engine.can_trigger_attack()
+    if not can_trigger:
+        raise HTTPException(status_code=409, detail=reason)
+    
     success = await sybil_attack.trigger(num_nodes=num_nodes)
     if not success:
         raise HTTPException(status_code=400, detail="Failed to trigger Sybil attack")
@@ -410,6 +430,11 @@ async def stop_sybil_attack():
 @app.post("/attack/majority/trigger")
 async def trigger_majority_attack():
     """Majority (%51) saldırısını tetikle"""
+    # Eşzamanlı atak limiti kontrolü
+    can_trigger, reason = attack_engine.can_trigger_attack()
+    if not can_trigger:
+        raise HTTPException(status_code=409, detail=reason)
+    
     try:
         attack_id = await majority_attack.execute()
         return {
@@ -442,6 +467,11 @@ async def stop_majority_attack():
 @app.post("/attack/partition/trigger")
 async def trigger_partition_attack():
     """Network Partition saldırısını tetikle"""
+    # Eşzamanlı atak limiti kontrolü
+    can_trigger, reason = attack_engine.can_trigger_attack()
+    if not can_trigger:
+        raise HTTPException(status_code=409, detail=reason)
+    
     try:
         attack_id = await network_partition.execute()
         return {
@@ -491,6 +521,11 @@ async def get_partition_status():
 @app.post("/attack/selfish/trigger")
 async def trigger_selfish_mining_attack(target_node_id: str):
     """Selfish Mining saldırısını tetikle"""
+    # Eşzamanlı atak limiti kontrolü
+    can_trigger, reason = attack_engine.can_trigger_attack()
+    if not can_trigger:
+        raise HTTPException(status_code=409, detail=reason)
+    
     result = selfish_mining.trigger(target_node_id)
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])

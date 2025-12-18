@@ -77,6 +77,28 @@ class AttackEngine:
         self.active_attacks: Dict[str, Attack] = {}
         self.attack_history: List[Attack] = []
         self.total_attacks_triggered = 0
+    
+    def can_trigger_attack(self) -> tuple[bool, str]:
+        """
+        Yeni bir attack tetiklenebilir mi kontrol et.
+        Sadece 1 attack aynı anda aktif olabilir.
+        
+        Returns:
+            tuple[bool, str]: (İzin var mı, Mesaj/Neden)
+        """
+        if len(self.active_attacks) > 0:
+            active_attack = list(self.active_attacks.values())[0]
+            return False, f"An attack is already active: {active_attack.attack_type.value} (ID: {active_attack.attack_id})"
+        return True, "OK"
+    
+    def get_active_attack_count(self) -> int:
+        """
+        Aktif attack sayısını döndür
+        
+        Returns:
+            int: Aktif attack sayısı
+        """
+        return len(self.active_attacks)
         
     def trigger_attack(
         self,

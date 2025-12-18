@@ -81,10 +81,8 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.status_bar)
         
         self.connection_label = QLabel("🔴 Disconnected")
-        self.update_label = QLabel("Last update: Never")
         
         self.status_bar.addPermanentWidget(self.connection_label)
-        self.status_bar.addPermanentWidget(self.update_label)
     
     
     def _setup_connections(self):
@@ -149,6 +147,9 @@ class MainWindow(QMainWindow):
             self.blockchain_page.clear_display()
             self.metrics_widget.clear_display()
             self.pbft_page.clear_display()
+            
+            # Reset sonrası butonları enable et (hiçbir aktif attack yok)
+            self.attack_panel_widget.update_button_states(False)
         else:
             self.status_bar.showMessage("Failed to reset simulator", 3000)
     
@@ -160,9 +161,27 @@ class MainWindow(QMainWindow):
     
     def _on_update_completed(self):
         """Handle update completion."""
-        from datetime import datetime
-        self.update_label.setText(f"Last update: {datetime.now().strftime('%H:%M:%S')}")
         self._check_connection()
+        # Her update'te button state'lerini kontrol et
+        self._update_attack_button_states()
+    
+    def _update_attack_button_states(self):
+        """
+        Aktif attack durumuna göre attack panel butonlarını güncelle.
+        API'dan active attacks bilgisini çekerek butonları enable/disable eder.
+        """
+        # API'dan tüm attack status'unu çek
+        attack_status = self.api_client.get_all_attacks_status()
+        
+        if attack_status and 'error' not in attack_status:
+            active_attacks = attack_status.get('active_attacks', [])
+            has_active = len(active_attacks) > 0
+            
+            # Attack panel'in butonlarını güncelle
+            self.attack_panel_widget.update_button_states(has_active)
+        else:
+            # Hata durumunda butonları enable et (varsayılan)
+            self.attack_panel_widget.update_button_states(False)
     
     def _on_attack_triggered(self, attack_type: str, params: dict):
         """Handle attack trigger request."""
@@ -171,9 +190,16 @@ class MainWindow(QMainWindow):
         
         if result and 'error' not in result:
             self.status_bar.showMessage(f"{attack_type.upper()} attack started", 3000)
+            # Buton state'lerini güncelle
+            self._update_attack_button_states()
         else:
-            error_msg = result.get('error', 'Unknown error') if result else 'Connection error'
-            self.status_bar.showMessage(f"Failed to trigger attack: {error_msg}", 5000)
+            # Hata durumu - 409 Conflict için özel mesaj
+            if result and result.get('error') == 'conflict':
+                conflict_msg = result.get('message', 'An attack is already active')
+                self.status_bar.showMessage(f"⚠️ {conflict_msg}", 5000)
+            else:
+                error_msg = result.get('error', 'Unknown error') if result else 'Connection error'
+                self.status_bar.showMessage(f"Failed to trigger attack: {error_msg}", 5000)
     
     def closeEvent(self, event):
         """Handle window close."""
