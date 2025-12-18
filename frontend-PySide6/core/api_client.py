@@ -18,6 +18,14 @@ class APIClient:
         self.timeout = 1000
         self._max_retries = 3
     
+    def set_base_url(self, base_url: str):
+        """Update backend base URL (for dynamic port support).
+        
+        Args:
+            base_url: New backend API base URL
+        """
+        self.base_url = base_url.rstrip('/')
+    
     def _request(self, method: str, endpoint: str, **kwargs) -> Optional[Dict]:
         """Make HTTP request with retry logic.
         

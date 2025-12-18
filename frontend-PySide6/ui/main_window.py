@@ -1,29 +1,43 @@
 """Main Window for PySide6 Blockchain Simulator."""
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QStatusBar, QTabWidget
+    QPushButton, QLabel, QStatusBar, QTabWidget, QMessageBox
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QIcon
 
 
 class MainWindow(QMainWindow):
     """Main application window."""
     
-    def __init__(self, api_client, data_manager, updater):
-        """Initialize main window."""
+    def __init__(self, api_client, data_manager, updater, backend_thread=None):
+        """Initialize main window.
+        
+        Args:
+            api_client: API client instance
+            data_manager: Data manager instance
+            updater: Data updater instance
+            backend_thread: Backend thread instance (None for external backend)
+        """
         super().__init__()
         
         self.api_client = api_client
         self.data_manager = data_manager
         self.updater = updater
+        self.backend_thread = backend_thread
+        self._backend_starting = False
         
         self.setWindowTitle("Blockchain Attack Simulator")
         self.setFixedSize(1200, 800)
         
         self._setup_ui()
         self._setup_connections()
-        self._check_connection()
+        
+        # Backend entegrasyonu varsa başlat
+        if self.backend_thread:
+            self._start_embedded_backend()
+        else:
+            self._check_connection()
     
     def _setup_ui(self):
         """Setup UI components."""
@@ -99,6 +113,12 @@ class MainWindow(QMainWindow):
         # PBFT updates
         self.data_manager.pbft_updated.connect(self.pbft_widget.update_pbft_status)
         self.data_manager.messages_updated.connect(self.pbft_widget.update_messages)
+        
+        # Backend thread signals (if embedded)
+        if self.backend_thread:
+            self.backend_thread.started.connect(self._on_backend_started)
+            self.backend_thread.error.connect(self._on_backend_error)
+            self.backend_thread.stopped.connect(self._on_backend_stopped)
     
     def _check_connection(self):
         """Check backend connection."""
@@ -201,7 +221,72 @@ class MainWindow(QMainWindow):
                 error_msg = result.get('error', 'Unknown error') if result else 'Connection error'
                 self.status_bar.showMessage(f"Failed to trigger attack: {error_msg}", 5000)
     
+    def _start_embedded_backend(self):
+        """Start embedded backend in thread."""
+        if self._backend_starting:
+            return
+        
+        self._backend_starting = True
+        self.status_bar.showMessage("Starting embedded backend...", 0)
+        self.connection_label.setText("🟡 Starting Backend...")
+        self.connection_label.setStyleSheet("color: orange;")
+        
+        # Backend thread'ini başlat
+        self.backend_thread.start()
+    
+    @Slot(int)
+    def _on_backend_started(self, port: int):
+        """Handle backend started signal."""
+        self._backend_starting = False
+        
+        # API client'ın base URL'ini güncelle
+        base_url = f"http://127.0.0.1:{port}"
+        self.api_client.set_base_url(base_url)
+        
+        # Data manager'ı da güncelle (api_client referansı)
+        self.data_manager.api_client = self.api_client
+        
+        self.status_bar.showMessage(f"✅ Backend started on port {port}", 5000)
+        self.connection_label.setText("🟢 Backend Ready")
+        self.connection_label.setStyleSheet("color: green;")
+        
+        # Connection check
+        self._check_connection()
+    
+    @Slot(str)
+    def _on_backend_error(self, error: str):
+        """Handle backend error signal."""
+        self._backend_starting = False
+        
+        self.status_bar.showMessage(f"❌ Backend error: {error}", 0)
+        self.connection_label.setText("🔴 Backend Error")
+        self.connection_label.setStyleSheet("color: red;")
+        
+        # Hata mesajı göster
+        QMessageBox.critical(
+            self,
+            "Backend Error",
+            f"Failed to start embedded backend:\n\n{error}\n\nThe application will close."
+        )
+        
+        self.close()
+    
+    @Slot()
+    def _on_backend_stopped(self):
+        """Handle backend stopped signal."""
+        self.status_bar.showMessage("Backend stopped", 3000)
+        self.connection_label.setText("🔴 Backend Stopped")
+        self.connection_label.setStyleSheet("color: red;")
+    
     def closeEvent(self, event):
         """Handle window close."""
+        # Data updater'ı durdur
         self.updater.stop_updating()
+        
+        # Embedded backend varsa onu da durdur
+        if self.backend_thread and self.backend_thread.isRunning():
+            self.status_bar.showMessage("Stopping backend...")
+            self.backend_thread.stop()
+            self.backend_thread.wait(5000)  # Max 5 saniye bekle
+        
         event.accept()
