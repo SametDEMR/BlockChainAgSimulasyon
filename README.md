@@ -1,10 +1,5 @@
 # 🔐 Interactive Blockchain Attack Simulator
 
-[![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
-[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-
 Blockchain ağlarının çeşitli saldırı senaryoları karşısındaki davranışlarını gerçek zamanlı olarak görselleştiren eğitim ve demo amaçlı interaktif simülatör.
 
 ## 📖 Genel Bakış
@@ -61,15 +56,7 @@ Interactive Blockchain Attack Simulator, blockchain teknolojisi ve güvenliği k
 
 ### 📊 Görselleştirme ve İzleme
 
-#### Streamlit Frontend (Web-based)
-- Real-time Dashboard (sistem metrikleri, PBFT status)
-- Interactive Network Map (streamlit-agraph)
-- Blockchain Explorer (fork gösterimi)
-- Node Tree View (validators/regular)
-- Attack Control Panel
-- Metrics Dashboard (Plotly charts)
-
-#### PySide6 Frontend (Desktop App) ⚡ **YENİ**
+#### PySide6 Frontend (Desktop App)
 - Native Qt application
 - Professional UI/UX
 - QDockWidget sistemi (customizable layout)
@@ -135,37 +122,6 @@ PySide6>=6.5.0
 pyqtgraph>=0.13.0
 networkx>=3.0
 requests>=2.31.0
-```
-
-## 🚀 Kurulum
-
-### 1. Repository'yi Klonlayın
-
-```bash
-git clone https://github.com/yourusername/BlockChainAgSimulasyon.git
-cd BlockChainAgSimulasyon
-```
-
-### 2. Virtual Environment Oluşturun (Önerilen)
-
-```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
-
-# Linux/Mac
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 3. Bağımlılıkları Yükleyin
-
-```bash
-# Backend ve Streamlit için
-pip install -r requirements.txt
-
-# PySide6 frontend için (opsiyonel)
-pip install -r frontend-PySide6/requirements.txt
 ```
 
 ## 💻 Kullanım
@@ -251,14 +207,6 @@ Native desktop uygulaması açılacaktır.
 4. Paralel zincir oluşumunu izleyin
 5. Merge sonrası orphan blokları gözlemleyin
 
-### Selfish Mining
-
-1. "Selfish Mining" seçin
-2. Attacker node'u seçin
-3. "Trigger Attack" butonuna basın
-4. Private chain vs public chain farkını izleyin
-5. Reveal anında blockchain değişimini görün
-
 ## 📁 Proje Yapısı
 
 ```
@@ -283,14 +231,7 @@ BlockChainAgSimulasyon/
 │       ├── majority_attack.py   # 51% attack
 │       ├── network_partition.py # Network partition
 │       └── selfish_mining.py    # Selfish mining
-├── frontend-streamlit/           # Streamlit Web UI
-│   ├── main.py                   # UI entry point
-│   └── components/               # UI components
-│       ├── attack_panel.py
-│       ├── metrics_dashboard.py
-│       ├── network_visualizer.py
-│       └── blockchain_visualizer.py
-├── frontend-PySide6/             # Qt Desktop UI ⚡ YENİ
+├── frontend-PySide6/             # Qt Desktop UI
 │   ├── main.py                   # Application entry
 │   ├── core/                     # Core logic
 │   │   ├── api_client.py         # Backend client
@@ -320,49 +261,32 @@ BlockChainAgSimulasyon/
     └── UI_YAPILAN_ISLEMLER.md
 ```
 
-## 🧪 Testler
-
-### Tüm Testleri Çalıştırma
-
-```bash
-# Backend testleri
-pytest backend/tests/
-
-# PySide6 frontend testleri
-pytest frontend-PySide6/tests/
-
-# Tüm testler
-pytest
-```
-
-### Test Coverage
-
-```bash
-pytest --cov=backend --cov-report=html
-```
-
-### Test İstatistikleri
-
-- **Backend Tests:** 100+ test PASSED
-- **Frontend (PySide6) Tests:** 187+ test PASSED
-- **Total Coverage:** ~85%
-
 ## 📸 Ekran Görüntüleri
 
 ### Dashboard
-*Gerçek zamanlı sistem metrikleri, PBFT status, ve aktivite logu*
+*Gerçek zamanlı sistem metrikleri, PBFT status*
+
+![Dashboard](./screenshots/Dashboard.png)
+
+### Network Nodes
+*Network Node'lerin detaylı görünümü ve aktivite logları*
+
+![Network_Nodes](screenshots/Network_Nodes.png)
 
 ### Network Map
 *Interactive network topology görselleştirmesi, node durumları ve bağlantılar*
 
+![Network_Map](./screenshots/Network_Map.png)
+
 ### Blockchain Explorer
 *Zincir görünümü, fork gösterimi, ve blok detayları*
 
-### Attack Control Panel
-*6 saldırı senaryosu, aktif saldırı takibi, ve parametre kontrolü*
+![Blockchain_Explorer](screenshots/Blockchain_Explorer.png)
 
-### Metrics Dashboard
-*Real-time response time grafikleri, node status cards, network health bars*
+### PBFT Messages
+*PBFT Messaga listesi*
+
+![PBFT_Messages](screenshots/PBFT_Messages.png)
 
 ## 🗺️ Yol Haritası
 
